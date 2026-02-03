@@ -1,117 +1,151 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import os
+from datetime import datetime
 
-# --- APP CONFIGURATION ---
-st.set_page_config(page_title="Abu Bakr's Business Hub", layout="wide")
-st.title("🏙️ Abu Bakr's Charging & Retail Hub")
+# --- 1. SETTINGS & DATABASE ---
+st.set_page_config(page_title="Abu Bakr Enterprise Hub", layout="wide")
 
-# --- DATA STORAGE FILES ---
-DB_FILE = "customer_log.csv"
-SHOP_FILE = "shop_inventory.csv"
-MISSING_FILE = "loss_log.csv"
+DB_CUST = "customer_data.csv"
+DB_INV = "inventory_data.csv"
+DB_MAINT = "maintenance_log.csv"
+DB_MISSING = "missing_cards.csv"
 
-# --- LOAD DATA ---
-if os.path.exists(DB_FILE): st.session_state.customers = pd.read_csv(DB_FILE)
-else: st.session_state.customers = pd.DataFrame(columns=["Year", "Date", "Card #", "Name", "Model", "Collected", "Price"])
-
-if os.path.exists(MISSING_FILE): st.session_state.missing = pd.read_csv(MISSING_FILE)
-else: st.session_state.missing = pd.DataFrame(columns=["Date", "Item", "Quantity", "Reason"])
-
-# --- LOAD SHOP INVENTORY ---
-if os.path.exists(SHOP_FILE):
-    st.session_state.shop = pd.read_csv(SHOP_FILE)
-else:
-    # Starting stock as requested
-    st.session_state.shop = pd.DataFrame([
-        {"Item": "Water 💦", "Stock": 60, "Price": 1.0},
-        {"Item": "Milcolac", "Stock": 20, "Price": 5.0},
-        {"Item": "Sweets", "Stock": 49, "Price": 1.0},
-        {"Item": "Bubble Gum", "Stock": 100, "Price": 0.5}
-    ])
-
-# --- SIDEBAR: MONEY ---
-st.sidebar.header("💰 Money Management")
-total_in = st.sidebar.number_input("Total Cash Today", min_value=0.0)
-bag1, bag2 = 124.0, st.sidebar.number_input("Restock Cost", min_value=0.0)
-bag3 = total_in - bag1 - bag2 - 30
-st.sidebar.write(f"**Bag 3 (Your Wealth): Le {max(0.0, bag3)}**")
-
-# --- TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["Charging Registry", "Retail & New Stock", "Missing Items", "Reports"])
-
-# --- TAB 1: CHARGING ---
-with tab1:
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.subheader("Check-In")
-        with st.form("charging_form", clear_on_submit=True):
-            card_no, name, model = st.text_input("Card #"), st.text_input("Customer Name"), st.text_input("Phone Model")
-            fee, year = st.selectbox("Fee", [3, 5]), st.selectbox("Year", [2025, 2026, 2027])
-            if st.form_submit_button("Save"):
-                new_data = {"Year": year, "Date": datetime.now().strftime("%d-%m"), "Card #": card_no, "Name": name, "Model": model, "Collected": "NO ❌", "Price": fee}
-                st.session_state.customers = pd.concat([st.session_state.customers, pd.DataFrame([new_data])], ignore_index=True)
-                st.session_state.customers.to_csv(DB_FILE, index=False)
-                st.success("Registered!")
-    with col2:
-        st.subheader("Collection Tracker")
-        for i, row in st.session_state.customers.iterrows():
-            if row['Collected'] == "NO ❌":
-                if st.button(f"Mark Collected: {row['Name']} ({row['Card #']})", key=f"c_{i}"):
-                    st.session_state.customers.at[i, 'Collected'] = "YES ✅"
-                    st.session_state.customers.to_csv(DB_FILE, index=False)
-                    st.rerun()
-        st.dataframe(st.session_state.customers.tail(10))
-
-# --- TAB 2: RETAIL & NEW STOCK ---
-with tab2:
-    col_stock1, col_stock2 = st.columns(2)
+def load_data():
+    if os.path.exists(DB_CUST): cust = pd.read_csv(DB_CUST)
+    else: cust = pd.DataFrame(columns=["Date", "Card #", "Name", "Model", "Status", "Price"])
    
-    with col_stock1:
-        st.header("➕ Add New Product / Stock")
-        with st.form("add_product_form", clear_on_submit=True):
-            p_name = st.text_input("Product Name (e.g., Juice)")
-            p_qty = st.number_input("Quantity to Add", min_value=1)
-            p_price = st.number_input("Selling Price", min_value=0.1)
-            if st.form_submit_button("Update Inventory"):
-                # If product exists, add to stock. If not, create new row.
-                if p_name in st.session_state.shop['Item'].values:
-                    idx = st.session_state.shop.index[st.session_state.shop['Item'] == p_name][0]
-                    st.session_state.shop.at[idx, 'Stock'] += p_qty
-                    st.session_state.shop.at[idx, 'Price'] = p_price # Update price if it changed
-                else:
-                    new_item = {"Item": p_name, "Stock": p_qty, "Price": p_price}
-                    st.session_state.shop = pd.concat([st.session_state.shop, pd.DataFrame([new_item])], ignore_index=True)
-               
-                st.session_state.shop.to_csv(SHOP_FILE, index=False)
-                st.success(f"Added {p_qty} of {p_name}!")
-                st.rerun()
+    if os.path.exists(DB_INV): inv = pd.read_csv(DB_INV)
+    else: inv = pd.DataFrame([{"Item": "Water 💦", "Stock": 60, "Price": 1.0, "Cost": 0.5}])
+   
+    if os.path.exists(DB_MAINT): maint = pd.read_csv(DB_MAINT)
+    else: maint = pd.DataFrame(columns=["Date", "Action", "Cost", "Next Due"])
+   
+    if os.path.exists(DB_MISSING): missing = pd.read_csv(DB_MISSING)
+    else: missing = pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"])
+   
+    return cust, inv, maint, missing
 
-    with col_stock2:
-        st.header("🛒 Record a Sale")
-        st.table(st.session_state.shop)
-        sell_item = st.selectbox("Select Item to Sell", st.session_state.shop['Item'].tolist())
-        if st.button("Confirm Sale"):
-            idx = st.session_state.shop.index[st.session_state.shop['Item'] == sell_item][0]
-            if st.session_state.shop.at[idx, 'Stock'] > 0:
-                st.session_state.shop.at[idx, 'Stock'] -= 1
-                st.session_state.shop.to_csv(SHOP_FILE, index=False)
-                st.success(f"Sold 1 {sell_item}!")
-                st.rerun()
-            else: st.error("Out of stock!")
+cust_df, inv_df, maint_df, missing_df = load_data()
 
-# --- TAB 3: LOSSES & TAB 4: REPORTS (Kept same as previous version) ---
-with tab3:
-    st.header("🚨 Missing Items")
-    with st.form("loss"):
-        item, qty, rsn = st.text_input("Item"), st.number_input("Qty", 1), st.text_input("Reason")
-        if st.form_submit_button("Log Loss"):
-            loss = {"Date": datetime.now().strftime("%Y-%m-%d"), "Item": item, "Quantity": qty, "Reason": rsn}
-            st.session_state.missing = pd.concat([st.session_state.missing, pd.DataFrame([loss])], ignore_index=True)
-            st.session_state.missing.to_csv(MISSING_FILE, index=False)
-            st.warning("Loss Logged.")
+# --- 2. LOGIN ---
+if 'auth' not in st.session_state: st.session_state.auth = None
+if not st.session_state.auth:
+    st.title("🏙️ Abu Bakr Enterprise Login")
+    user = st.text_input("Username")
+    pw = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if user == "admin" and pw == "abu123": st.session_state.auth = "admin"; st.rerun()
+        elif user == "staff" and pw == "hub456": st.session_state.auth = "staff"; st.rerun()
+    st.stop()
 
-with tab4:
-    st.header("📊 Export")
-    st.download_button("Download Full Log", st.session_state.customers.to_csv(index=False), "Full_Report.csv")
+# --- 3. SIDEBAR: 3-BAG SYSTEM ---
+st.sidebar.title(f"🚀 {st.session_state.auth.upper()} PORTAL")
+st.sidebar.divider()
+st.sidebar.header("💰 3-Bag System")
+total_rev = cust_df['Price'].sum()
+bag1_ops = 124.0
+bag2_restock = st.sidebar.number_input("Bag 2: Restock Money (Le)", min_value=0.0)
+bag3_wealth = total_rev - bag1_ops - bag2_restock - 30
+
+st.sidebar.info(f"💼 Bag 1 (Ops): Le {bag1_ops}")
+st.sidebar.info(f"🛒 Bag 2 (Inv): Le {bag2_restock}")
+st.sidebar.success(f"💎 Bag 3 (Wealth): Le {max(0.0, bag3_wealth)}")
+
+if st.sidebar.button("Logout"): st.session_state.auth = None; st.rerun()
+
+menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Maintenance & Oils", "🚨 Missing Cards", "⚙️ Admin Tools"]
+choice = st.sidebar.radio("Go To:", menu)
+
+# --- 4. APP PAGES ---
+
+if choice == "📊 Dashboard":
+    st.header("📈 Business Performance")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Revenue", f"Le {total_rev}")
+    c2.metric("Maint. Cost", f"Le {maint_df['Cost'].sum()}")
+    c3.metric("Wealth (Bag 3)", f"Le {max(0.0, bag3_wealth)}")
+
+elif choice == "🔌 Charging Registry":
+    st.subheader("New Entry")
+    with st.form("reg", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        card = col1.text_input("Card #")
+        name = col2.text_input("Customer Name")
+        model = col1.text_input("Model")
+        fee = col2.selectbox("Fee", [3, 5])
+        if st.form_submit_button("Save Entry"):
+            new_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": model, "Status": "Charging", "Price": fee}
+            cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
+            cust_df.to_csv(DB_CUST, index=False); st.success("Saved!"); st.rerun()
+    st.dataframe(cust_df[cust_df['Status'] == "Charging"])
+
+elif choice == "🛒 Retail Shop":
+    st.table(inv_df)
+    item = st.selectbox("Record Sale", inv_df['Item'].tolist())
+    if st.button("Confirm Sale"):
+        idx = inv_df.index[inv_df['Item'] == item][0]
+        if inv_df.at[idx, 'Stock'] > 0:
+            inv_df.at[idx, 'Stock'] -= 1
+            inv_df.to_csv(DB_INV, index=False); st.success("Sold!"); st.rerun()
+
+elif choice == "🔧 Maintenance & Oils":
+    st.header("🔧 Machine Maintenance")
+    with st.form("m_form", clear_on_submit=True):
+        act = st.selectbox("Action", ["Oil Change", "Gen Repair", "Cleaning"])
+        cost = st.number_input("Cost (Le)", min_value=0.0)
+        due = st.date_input("Next Date")
+        if st.form_submit_button("Log"):
+            m_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Action": act, "Cost": cost, "Next Due": due}
+            maint_df = pd.concat([maint_df, pd.DataFrame([m_row])], ignore_index=True)
+            maint_df.to_csv(DB_MAINT, index=False); st.success("Logged!"); st.rerun()
+    st.dataframe(maint_df)
+
+elif choice == "🚨 Missing Cards":
+    st.header("🚨 Missing Card Log")
+    with st.form("ms_form", clear_on_submit=True):
+        m_card = st.text_input("Card #")
+        rsn = st.selectbox("Reason", ["Lost", "Stolen", "Broken"])
+        if st.form_submit_button("Report"):
+            ms_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": m_card, "Reason": rsn, "Staff": st.session_state.auth}
+            missing_df = pd.concat([missing_df, pd.DataFrame([ms_row])], ignore_index=True)
+            missing_df.to_csv(DB_MISSING, index=False); st.success("Reported!"); st.rerun()
+    st.dataframe(missing_df)
+
+# --- 5. ADMIN TOOLS (NEW ADDITIONS) ---
+elif choice == "⚙️ Admin Tools":
+    if st.session_state.auth == "admin":
+        st.header("🔐 Admin Controls")
+       
+        # ADD NEW PRODUCTS
+        with st.expander("➕ Add New Inventory Item"):
+            p_name = st.text_input("Item Name")
+            p_stk = st.number_input("Qty", 1)
+            p_prc = st.number_input("Price", 0.5)
+            if st.button("Add Item"):
+                new_p = {"Item": p_name, "Stock": p_stk, "Price": p_prc, "Cost": 0.0}
+                inv_df = pd.concat([inv_df, pd.DataFrame([new_p])], ignore_index=True)
+                inv_df.to_csv(DB_INV, index=False); st.success("Added!"); st.rerun()
+
+        st.divider()
+
+        # DOWNLOAD REPORTS
+        st.subheader("📁 Download Business Reports")
+        st.write("Click below to download your data for the CEO.")
+        col_d1, col_d2 = st.columns(2)
+        col_d1.download_button("Download Sales Report", cust_df.to_csv(index=False), "sales_report.csv", "text/csv")
+        col_d2.download_button("Download Maint. Report", maint_df.to_csv(index=False), "maintenance_report.csv", "text/csv")
+
+        st.divider()
+
+        # RECYCLE / RESET BUTTON
+        st.subheader("♻️ Monthly Recycle (Reset)")
+        st.warning("This will permanently clear all logs. Make sure you download reports above first!")
+        if st.button("♻️ RESET ALL LOGS FOR NEW MONTH"):
+            pd.DataFrame(columns=["Date", "Card #", "Name", "Model", "Status", "Price"]).to_csv(DB_CUST, index=False)
+            pd.DataFrame(columns=["Date", "Action", "Cost", "Next Due"]).to_csv(DB_MAINT, index=False)
+            pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"]).to_csv(DB_MISSING, index=False)
+            st.success("System Recycled! Ready for new month.")
+            st.rerun()
+    else: st.error("Access Denied: Admin Only")
+
