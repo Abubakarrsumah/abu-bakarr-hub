@@ -70,15 +70,31 @@ elif choice == "🔌 Charging Registry":
     st.subheader("New Entry")
     with st.form("reg", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        card = col1.text_input("Card #")
-        name = col2.text_input("Customer Name")
-        model = col1.text_input("Model")
-        fee = col2.selectbox("Fee", [3, 5])
+        card, name = col1.text_input("Card #"), col2.text_input("Customer Name")
+        model, fee = col1.text_input("Model"), col2.selectbox("Fee", [3, 5])
         if st.form_submit_button("Save Entry"):
             new_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": model, "Status": "Charging", "Price": fee}
             cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
             cust_df.to_csv(DB_CUST, index=False); st.success("Saved!"); st.rerun()
-    st.dataframe(cust_df[cust_df['Status'] == "Charging"])
+   
+    st.divider()
+    st.subheader("✅ Confirm Collection")
+    st.info("Search for a customer below and click 'Confirm' only when they take their phone.")
+   
+    search = st.text_input("🔍 Search Name or Card #")
+    active = cust_df[cust_df['Status'] == "Charging"]
+    if search:
+        active = active[active.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+   
+    # Grid for Collection Buttons
+    for i, row in active.iterrows():
+        with st.expander(f"CARD {row['Card #']} - {row['Name']} ({row['Model']})"):
+            st.write(f"Fee: Le {row['Price']}")
+            if st.button(f"Confirm Collection for {row['Name']}", key=f"btn_{i}"):
+                cust_df.at[i, 'Status'] = "Collected ✅"
+                cust_df.to_csv(DB_CUST, index=False)
+                st.success(f"Collection Confirmed for {row['Name']}!")
+                st.rerun()
 
 elif choice == "🛒 Retail Shop":
     st.table(inv_df)
@@ -112,12 +128,9 @@ elif choice == "🚨 Missing Cards":
             missing_df.to_csv(DB_MISSING, index=False); st.success("Reported!"); st.rerun()
     st.dataframe(missing_df)
 
-# --- 5. ADMIN TOOLS (NEW ADDITIONS) ---
 elif choice == "⚙️ Admin Tools":
     if st.session_state.auth == "admin":
         st.header("🔐 Admin Controls")
-       
-        # ADD NEW PRODUCTS
         with st.expander("➕ Add New Inventory Item"):
             p_name = st.text_input("Item Name")
             p_stk = st.number_input("Qty", 1)
@@ -126,26 +139,14 @@ elif choice == "⚙️ Admin Tools":
                 new_p = {"Item": p_name, "Stock": p_stk, "Price": p_prc, "Cost": 0.0}
                 inv_df = pd.concat([inv_df, pd.DataFrame([new_p])], ignore_index=True)
                 inv_df.to_csv(DB_INV, index=False); st.success("Added!"); st.rerun()
-
         st.divider()
-
-        # DOWNLOAD REPORTS
         st.subheader("📁 Download Business Reports")
-        st.write("Click below to download your data for the CEO.")
-        col_d1, col_d2 = st.columns(2)
-        col_d1.download_button("Download Sales Report", cust_df.to_csv(index=False), "sales_report.csv", "text/csv")
-        col_d2.download_button("Download Maint. Report", maint_df.to_csv(index=False), "maintenance_report.csv", "text/csv")
-
+        st.download_button("Download Sales Report", cust_df.to_csv(index=False), "sales_report.csv", "text/csv")
         st.divider()
-
-        # RECYCLE / RESET BUTTON
-        st.subheader("♻️ Monthly Recycle (Reset)")
-        st.warning("This will permanently clear all logs. Make sure you download reports above first!")
-        if st.button("♻️ RESET ALL LOGS FOR NEW MONTH"):
+        st.subheader("♻️ Monthly Recycle")
+        if st.button("♻️ RESET ALL LOGS"):
             pd.DataFrame(columns=["Date", "Card #", "Name", "Model", "Status", "Price"]).to_csv(DB_CUST, index=False)
             pd.DataFrame(columns=["Date", "Action", "Cost", "Next Due"]).to_csv(DB_MAINT, index=False)
             pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"]).to_csv(DB_MISSING, index=False)
-            st.success("System Recycled! Ready for new month.")
-            st.rerun()
-    else: st.error("Access Denied: Admin Only")
-
+            st.success("Recycled!"); st.rerun()
+    else: st.error("Admin Only")
