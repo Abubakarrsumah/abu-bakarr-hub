@@ -68,7 +68,7 @@ if choice == "📊 Dashboard":
 
 elif choice == "🔌 Charging Registry":
     # --- PART A: NEW ENTRY FORM ---
-    st.subheader("📝 1. Register New Phone")
+    st.subheader("📝 1. New Entry")
     with st.form("reg", clear_on_submit=True):
         col1, col2 = st.columns(2)
         card, name = col1.text_input("Card #"), col2.text_input("Customer Name")
@@ -80,27 +80,32 @@ elif choice == "🔌 Charging Registry":
    
     st.divider()
 
-    # --- PART B: COLLECTION CONFIRMATION AREA ---
-    st.subheader("✅ 2. Confirm Item Collection")
-    st.write("Search for the card number and click the button when the customer collects.")
-   
-    search = st.text_input("🔍 Search Card # or Name to Confirm")
+    # --- PART B: ACTIVE ENTRY TABLE ---
+    st.subheader("📋 2. Active Charging List")
     active = cust_df[cust_df['Status'] == "Charging"]
-   
-    if search:
-        active = active[active.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
-   
     if active.empty:
-        st.info("No items pending collection.")
+        st.info("No phones are currently charging.")
     else:
-        # Create a clean list with confirmation buttons
-        for i, row in active.iterrows():
+        st.dataframe(active, use_container_width=True)
+
+    st.divider()
+
+    # --- PART C: COLLECTION CONFIRMATION AREA ---
+    st.subheader("✅ 3. Confirm Collection")
+    search = st.text_input("🔍 Search Card # or Name to Confirm")
+   
+    to_confirm = active.copy()
+    if search:
+        to_confirm = to_confirm[to_confirm.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+   
+    if not to_confirm.empty:
+        for i, row in to_confirm.iterrows():
             col_info, col_btn = st.columns([3, 1])
-            col_info.write(f"**Card {row['Card #']}**: {row['Name']} - {row['Model']} (Le {row['Price']})")
+            col_info.write(f"**Card {row['Card #']}**: {row['Name']} - {row['Model']}")
             if col_btn.button(f"Confirm Collection", key=f"confirm_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
                 cust_df.to_csv(DB_CUST, index=False)
-                st.success(f"SUCCESS: Card {row['Card #']} marked as Collected!")
+                st.success(f"Card {row['Card #']} Collected!")
                 st.rerun()
 
 elif choice == "🛒 Retail Shop":
