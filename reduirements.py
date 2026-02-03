@@ -67,7 +67,8 @@ if choice == "📊 Dashboard":
     c3.metric("Wealth (Bag 3)", f"Le {max(0.0, bag3_wealth)}")
 
 elif choice == "🔌 Charging Registry":
-    st.subheader("New Entry")
+    # --- PART A: NEW ENTRY FORM ---
+    st.subheader("📝 1. Register New Phone")
     with st.form("reg", clear_on_submit=True):
         col1, col2 = st.columns(2)
         card, name = col1.text_input("Card #"), col2.text_input("Customer Name")
@@ -78,22 +79,28 @@ elif choice == "🔌 Charging Registry":
             cust_df.to_csv(DB_CUST, index=False); st.success("Saved!"); st.rerun()
    
     st.divider()
-    st.subheader("✅ Confirm Collection")
-    st.info("Search for a customer below and click 'Confirm' only when they take their phone.")
+
+    # --- PART B: COLLECTION CONFIRMATION AREA ---
+    st.subheader("✅ 2. Confirm Item Collection")
+    st.write("Search for the card number and click the button when the customer collects.")
    
-    search = st.text_input("🔍 Search Name or Card #")
+    search = st.text_input("🔍 Search Card # or Name to Confirm")
     active = cust_df[cust_df['Status'] == "Charging"]
+   
     if search:
         active = active[active.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
    
-    # Grid for Collection Buttons
-    for i, row in active.iterrows():
-        with st.expander(f"CARD {row['Card #']} - {row['Name']} ({row['Model']})"):
-            st.write(f"Fee: Le {row['Price']}")
-            if st.button(f"Confirm Collection for {row['Name']}", key=f"btn_{i}"):
+    if active.empty:
+        st.info("No items pending collection.")
+    else:
+        # Create a clean list with confirmation buttons
+        for i, row in active.iterrows():
+            col_info, col_btn = st.columns([3, 1])
+            col_info.write(f"**Card {row['Card #']}**: {row['Name']} - {row['Model']} (Le {row['Price']})")
+            if col_btn.button(f"Confirm Collection", key=f"confirm_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
                 cust_df.to_csv(DB_CUST, index=False)
-                st.success(f"Collection Confirmed for {row['Name']}!")
+                st.success(f"SUCCESS: Card {row['Card #']} marked as Collected!")
                 st.rerun()
 
 elif choice == "🛒 Retail Shop":
