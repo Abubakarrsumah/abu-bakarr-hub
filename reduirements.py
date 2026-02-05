@@ -3,128 +3,139 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# --- 1. MOBILE-FRIENDLY CONFIG ---
-st.set_page_config(
-    page_title="Abu Bakr Hub",
-    layout="wide",
-    initial_sidebar_state="collapsed" # Better for small Android screens
-)
+# --- 1. MOBILE & DESKTOP OPTIMIZATION ---
+st.set_page_config(page_title="Abu Bakr Enterprise Hub", layout="wide")
 
-# --- 2. DATABASE LOADING ---
-DB_CUST = "customer_data.csv"
-DB_INV = "inventory_data.csv"
-DB_MAINT = "maintenance_log.csv"
-DB_MISSING = "missing_cards.csv"
-DB_LOGIN = "login_creds.csv"
-
+# --- 2. DATABASE RECOVERY & LOADING ---
 def load_data():
-    if os.path.exists(DB_CUST): cust = pd.read_csv(DB_CUST)
-    else: cust = pd.DataFrame(columns=["Date", "Card #", "Name", "Model", "Status", "Price"])
-   
-    if os.path.exists(DB_INV): inv = pd.read_csv(DB_INV)
-    else: inv = pd.DataFrame([{"Item": "Water 💦", "Stock": 60, "Price": 1.0, "Cost": 0.5}])
-   
-    if os.path.exists(DB_MAINT): maint = pd.read_csv(DB_MAINT)
-    else: maint = pd.DataFrame(columns=["Date", "Action", "Cost", "Next Due"])
-   
-    if os.path.exists(DB_MISSING): missing = pd.read_csv(DB_MISSING)
-    else: missing = pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"])
-   
-    if os.path.exists(DB_LOGIN): login = pd.read_csv(DB_LOGIN)
-    else: login = pd.DataFrame([{"role": "admin", "user": "admin", "pw": "abu123"},
-                             {"role": "staff", "user": "staff", "pw": "hub456"}])
-   
-    return cust, inv, maint, missing, login
+    # We use these exact filenames to make sure no old data is lost
+    files = {
+        "cust": ("customer_data.csv", ["Date", "Card #", "Name", "Model", "Status", "Price"]),
+        "inv": ("inventory_data.csv", ["Item", "Stock", "Price", "Cost"]),
+        "maint": ("maintenance_log.csv", ["Date", "Action", "Cost", "Next Due"]),
+        "missing": ("missing_cards.csv", ["Date", "Card #", "Reason", "Staff"]),
+        "login": ("login_creds.csv", ["role", "user", "pw"])
+    }
+    data = {}
+    for key, (file, cols) in files.items():
+        if os.path.exists(file):
+            data[key] = pd.read_csv(file)
+        else:
+            # Default data if files are totally new
+            if key == "login":
+                data[key] = pd.DataFrame([{"role": "admin", "user": "admin", "pw": "abu123"}, {"role": "staff", "user": "staff", "pw": "hub456"}])
+            else:
+                data[key] = pd.DataFrame(columns=cols)
+    return data["cust"], data["inv"], data["maint"], data["missing"], data[ "login"]
 
 cust_df, inv_df, maint_df, missing_df, login_df = load_data()
 
-# --- 3. LOGIN ---
+# --- 3. SMART LOGIN (NO CAPITAL ERROR) ---
 if 'auth' not in st.session_state: st.session_state.auth = None
 if not st.session_state.auth:
-    st.title("🏙️ Abu Bakr Hub Login")
-    u_in = st.text_input("Username")
-    p_in = st.text_input("Password", type="password")
+    st.title("🏙️ Abu Bakr Enterprise Login")
+    u_in = st.text_input("Username").lower().strip() # Fixes capital "Staff" error
+    p_in = st.text_input("Password", type="password").strip()
     if st.button("Login"):
-        user_match = login_df[(login_df['user'] == u_in) & (login_df['pw'] == p_in)]
+        user_match = login_df[(login_df['user'].str.lower() == u_in) & (login_df['pw'] == p_in)]
         if not user_match.empty:
             st.session_state.auth = user_match.iloc[0]['role']
             st.rerun()
         else: st.error("Access Denied")
     st.stop()
 
-# --- 4. NAVIGATION ---
-menu = ["📊 Dashboard", "🔌 Charging", "🛒 Shop", "🔧 Maint", "⚙️ Admin"]
-choice = st.sidebar.radio("Menu", menu)
-
-# --- 5. 3-BAG SYSTEM (MOBILE VIEW) ---
+# --- 4. SIDEBAR (3-BAG SYSTEM) ---
+st.sidebar.title(f"🚀 {st.session_state.auth.upper()} PORTAL")
 st.sidebar.divider()
-rev = cust_df['Price'].sum()
-b1, b2 = 124.0, st.sidebar.number_input("Bag 2 (Restock)", 0.0)
-st.sidebar.success(f"Wealth: Le {rev - b1 - b2 - 30}")
+total_rev = cust_df['Price'].sum()
+st.sidebar.info(f"💼 Bag 1 (Ops): Le 124.0")
+bag2 = st.sidebar.number_input("Bag 2 (Restock)", 0.0)
+st.sidebar.success(f"💎 Bag 3 (Wealth): Le {total_rev - 124.0 - bag2 - 30}")
+if st.sidebar.button("Logout"): st.session_state.auth = None; st.rerun()
 
-# --- 6. PAGE LOGIC ---
+menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Maintenance", "🚨 Missing Cards", "⚙️ Admin Tools"]
+choice = st.sidebar.radio("Go To:", menu)
 
-if choice == "🔌 Charging":
-    st.header("Registry")
-    models = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button", "Other"]
-   
-    with st.expander("➕ Register New Device", expanded=True):
+# --- 5. PAGE LOGIC (RESTORING ALL ITEMS) ---
+
+if choice == "📊 Dashboard":
+    st.header("📈 Business Performance")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Charging Rev", f"Le {total_rev}")
+    c2.metric("Maint. Cost", f"Le {maint_df['Cost'].sum()}")
+    c3.metric("Missing Cards", len(missing_df))
+
+elif choice == "🔌 Charging Registry":
+    # 1. New Entry (Upgraded Fee & Models)
+    with st.expander("📝 1. New Entry", expanded=True):
         with st.form("reg", clear_on_submit=True):
-            card = st.selectbox("Card #", list(range(1, 101)))
-            name = st.text_input("Name")
-            mod = st.selectbox("Model", models)
-            fee = st.select_slider("Fee (Le)", options=list(range(3, 11)))
+            col1, col2 = st.columns(2)
+            card = col1.selectbox("Card #", list(range(1, 101)))
+            name = col2.text_input("Name")
+            mod = col1.selectbox("Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Other"])
+            fee = col2.select_slider("Fee (Le)", options=list(range(3, 11)))
             if st.form_submit_button("Save"):
                 new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
                 cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
-                cust_df.to_csv(DB_CUST, index=False); st.rerun()
-
-    st.divider()
-    st.subheader("✅ Collections")
+                cust_df.to_csv("customer_data.csv", index=False); st.rerun()
+    # 2. Collection Confirmation
     active = cust_df[cust_df['Status'] == "Charging"]
+    st.subheader("✅ 2. Confirm Collection")
     for i, row in active.iterrows():
-        # Mobile-friendly list layout
-        c_name, c_btn = st.columns([2, 1])
-        c_name.write(f"Crd {row['Card #']}: {row['Name']}")
-        if c_btn.button("Confirm", key=f"v85_{i}"):
+        if st.button(f"Confirm: Card {row['Card #']} - {row['Name']}", key=f"v87_{i}"):
             cust_df.at[i, 'Status'] = "Collected ✅"
-            cust_df.to_csv(DB_CUST, index=False); st.rerun()
+            cust_df.to_csv("customer_data.csv", index=False); st.rerun()
 
-elif choice == "🛒 Shop":
-    st.header("Retail Profit")
+elif choice == "🛒 Retail Shop":
+    st.header("🛒 Shop Profit")
     inv_df['Profit'] = inv_df['Price'] - inv_df['Cost']
-    st.dataframe(inv_df[['Item', 'Stock', 'Price', 'Profit']], use_container_width=True)
-   
-    sell = st.selectbox("Sell Item", inv_df['Item'].tolist())
+    st.dataframe(inv_df, use_container_width=True)
+    item_sell = st.selectbox("Sell Item", inv_df['Item'].tolist())
     if st.button("Confirm Sale"):
-        idx = inv_df.index[inv_df['Item'] == sell][0]
+        idx = inv_df.index[inv_df['Item'] == item_sell][0]
         if inv_df.at[idx, 'Stock'] > 0:
             inv_df.at[idx, 'Stock'] -= 1
-            inv_df.to_csv(DB_INV, index=False); st.success("Sold!"); st.rerun()
+            inv_df.to_csv("inventory_data.csv", index=False); st.success("Sold!"); st.rerun()
 
-elif choice == "⚙️ Admin":
+elif choice == "🔧 Maintenance":
+    st.header("🔧 Machine & Oil Log") # Restored!
+    with st.form("m_form"):
+        act = st.selectbox("Action", ["Oil Change", "Repair", "Cleaning"])
+        cost = st.number_input("Cost", 0.0)
+        due = st.date_input("Next Date")
+        if st.form_submit_button("Log Maintenance"):
+            m_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Action": act, "Cost": cost, "Next Due": str(due)}
+            maint_df = pd.concat([maint_df, pd.DataFrame([m_row])], ignore_index=True)
+            maint_df.to_csv("maintenance_log.csv", index=False); st.success("Logged!"); st.rerun()
+    st.dataframe(maint_df)
+
+elif choice == "🚨 Missing Cards":
+    st.header("🚨 Missing Card Report") # Restored!
+    with st.form("ms_form"):
+        mc = st.selectbox("Card #", list(range(1, 101)))
+        rsn = st.text_input("Reason")
+        if st.form_submit_button("Report"):
+            ms_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": mc, "Reason": rsn, "Staff": st.session_state.auth}
+            missing_df = pd.concat([missing_df, pd.DataFrame([ms_row])], ignore_index=True)
+            missing_df.to_csv("missing_cards.csv", index=False); st.success("Reported!"); st.rerun()
+    st.dataframe(missing_df)
+
+elif choice == "⚙️ Admin Tools":
     if st.session_state.auth == "admin":
-        # Edit Credentials
-        with st.expander("🔑 Edit Logins"):
+        st.header("🛠️ Admin Master Control")
+        with st.expander("🔑 Change Credentials"):
             role = st.selectbox("Role", ["admin", "staff"])
-            nu, np = st.text_input("New User"), st.text_input("New PW", type="password")
+            nu, np = st.text_input("New User"), st.text_input("New PW")
             if st.button("Update"):
-                login_df.loc[login_df['role'] == role, 'user'] = nu
-                login_df.loc[login_df['role'] == role, 'pw'] = np
-                login_df.to_csv(DB_LOGIN, index=False); st.success("Updated")
+                login_df.loc[login_df['role'] == role, ['user', 'pw']] = [nu, np]
+                login_df.to_csv("login_creds.csv", index=False); st.success("Updated")
        
-        # New Product
-        with st.expander("➕ New Product"):
-            name = st.text_input("Item Name")
-            cost = st.number_input("Cost", 0.0)
-            price = st.number_input("Price", 0.0)
-            if st.button("Add"):
-                item = {"Item": name, "Stock": 10, "Price": price, "Cost": cost}
-                inv_df = pd.concat([inv_df, pd.DataFrame([item])], ignore_index=True)
-                inv_df.to_csv(DB_INV, index=False); st.rerun()
-               
         st.divider()
-        st.download_button("📥 Monthly Report", cust_df.to_csv(index=False), "report.csv")
-    else: st.error("Admin Only")
-
-# Maintenance and Dashboard sections remain integrated in the code structure
+        st.subheader("♻️ RESET ALL DATA (Clear History)") # Restored!
+        if st.button("♻️ DANGER: RESET EVERYTHING"):
+            for f in ["customer_data.csv", "maintenance_log.csv", "missing_cards.csv"]:
+                if os.path.exists(f): os.remove(f)
+            st.success("All History Cleared!"); st.rerun()
+           
+        st.download_button("📥 Master Report", cust_df.to_csv(index=False), "report.csv")
+    else: st.error("Admin Access Required")
