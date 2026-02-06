@@ -212,9 +212,9 @@ if not missing_df.empty:
         st.success("Missing cards list has been cleared!")
         st.rerun()
         
-if choice == "⚙️ Admin Tools":
+elif choice == "⚙️ Admin Tools":
     # 1. Check if the logged-in user is an admin
-if st.session_state.auth == "admin"
+   if st.session_state.auth == "admin"
         st.header("🛠️ Admin Master Control")
        
         # --- FEATURE 1: USER MANAGEMENT ---
