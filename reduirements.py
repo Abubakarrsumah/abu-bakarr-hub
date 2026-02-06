@@ -73,7 +73,7 @@ elif choice == "🔌 Charging Registry":
     with st.form("reg", clear_on_submit=True):
         st.subheader("📝 1. Register New Device")
         c1, c2 = st.columns(2)
-        card = c1.selectbox("Card #", list(range(o, 101)))
+        card = c1.selectbox("Card #", list(range(1, 101)))
         name = c2.text_input("Customer Name")
         mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "butten phone", "power bank", "Other"])
         fee = c2.select_slider("Select Fee (Le)", options=list(range(3, 11)))
