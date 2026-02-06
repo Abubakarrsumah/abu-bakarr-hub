@@ -256,31 +256,3 @@ elif choice == "⚙️ Admin Tools":
     else:
         # If a staff member tries to click Admin Tools
         st.error("🚫 Access Denied. Admin credentials required.")
-
-            st.divider()
-            st.subheader("Add New User")
-            new_u = st.text_input("New Username", key="new_u_input").lower().strip()
-            new_p = st.text_input("New Password", type="password", key="new_p_input")
-            new_r = st.selectbox("Assign Role", ["staff", "admin"])
-           
-            if st.button("➕ Create User"):
-                if new_u and new_p:
-                    if new_u in login_df['user'].values:
-                        st.error("Username already exists!")
-                    else:
-                        new_user_row = {"role": new_r, "user": new_u, "pw": new_p}
-                        login_df = pd.concat([login_df, pd.DataFrame([new_user_row])], ignore_index=True)
-                        login_df.to_csv("login_creds.csv", index=False)
-                        st.success(f"User {new_u} created as {new_r}!")
-                        st.rerun()
-                else:
-                    st.warning("Please enter both username and password.")
-        st.divider()
-        st.subheader("♻️ RESET ALL DATA (Clear History)") # Restored!
-        if st.button("♻️ DANGER: RESET EVERYTHING"):
-            for f in ["customer_data.csv", "maintenance_log.csv", "missing_cards.csv"]:
-                if os.path.exists(f): os.remove(f)
-            st.success("All History Cleared!"); st.rerun()
-           
-        st.download_button("📥 Master Report", cust_df.to_csv(index=False), "report.csv")
-    else: st.error("Admin Access Required")
