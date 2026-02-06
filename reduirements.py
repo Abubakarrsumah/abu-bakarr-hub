@@ -206,28 +206,56 @@ if not missing_df.empty:
         st.rerun()
         
 elif choice == "⚙️ Admin Tools":
+    # Only allow entry if the user is an 'admin'
     if st.session_state.auth == "admin":
         st.header("🛠️ Admin Master Control")
-        with st.expander("🔑 Change Credentials"):
-            role = st.selectbox("Role", ["admin", "staff"])
-            nu, np = st.text_input("New User"), st.text_input("New PW")
-            if st.button("Update"):
-                login_df.loc[login_df['role'] == role, ['user', 'pw']] = [nu, np]
-                login_df.to_csv("login_creds.csv", index=False); st.success("Updated")
-       # --- NEW USER MANAGEMENT SECTION ---
-        with st.expander("👤 User Management (Add/Delete)"):
-            st.subheader("Current Users")
-            for idx, row in login_df.iterrows():
-                col_u, col_r, col_d = st.columns([2, 2, 1])
-                col_u.write(f"**User:** {row['user']}")
-                col_r.write(f"**Role:** {row['role']}")
-                # Prevent Admin from deleting themselves to avoid being locked out
-                if row['user'] != st.session_state.auth:
-                    if col_d.button("Delete", key=f"del_{idx}"):
-                        login_df = login_df.drop(idx)
-                        login_df.to_csv("login_creds.csv", index=False)
-                        st.success(f"User {row['user']} deleted!")
-                        st.rerun()
+       
+        # 1. ADD NEW USERS & CHANGE LOGIN
+        with st.expander("🔑 User Management"):
+            st.subheader("Add New User")
+            new_u = st.text_input("New Username").lower().strip()
+            new_p = st.text_input("New Password", type="password")
+            new_r = st.selectbox("Role", ["staff", "admin"])
+            if st.button("➕ Create User"):
+                new_user_row = {"role": new_r, "user": new_u, "pw": new_p}
+                login_df = pd.concat([login_df, pd.DataFrame([new_user_row])], ignore_index=True)
+                login_df.to_csv("login_creds.csv", index=False)
+                st.success(f"User {new_u} added!")
+                st.rerun()
+
+        # 2. ADD STOCK (For Retail Shop)
+        with st.expander("📦 Inventory Management"):
+            st.subheader("Add New Stock")
+            with st.form("add_stock"):
+                i_name = st.text_input("Item Name")
+                i_stock = st.number_input("Stock Quantity", min_value=1)
+                i_price = st.number_input("Selling Price", min_value=0.0)
+                i_cost = st.number_input("Cost Price", min_value=0.0)
+                if st.form_submit_button("Add to Shop"):
+                    new_item = {"Item": i_name, "Stock": i_stock, "Price": i_price, "Cost": i_cost}
+                    inv_df = pd.concat([inv_df, pd.DataFrame([new_item])], ignore_index=True)
+                    inv_df.to_csv("inventory_data.csv", index=False)
+                    st.success(f"Added {i_name} to inventory!")
+                    st.rerun()
+
+        # 3. MASTER REPORT DOWNLOAD
+        with st.expander("📊 Business Reports"):
+            st.subheader("Download Full Data")
+            full_csv = cust_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Download Master Report", data=full_csv, file_name="Master_Report.csv")
+
+        # 4. RESET APP HISTORY
+        with st.expander("⚠️ Danger Zone"):
+            st.subheader("Clear App History")
+            if st.button("🗑️ RESET EVERYTHING (Clear All Data)"):
+                # This wipes the CSV files
+                for f in ["customer_data.csv", "maintenance_log.csv", "missing_cards.csv"]:
+                    pd.DataFrame().to_csv(f, index=False)
+                st.warning("All business history has been cleared!")
+                st.rerun()
+    else:
+        # If a staff member tries to click Admin Tools
+        st.error("🚫 Access Denied. Admin credentials required.")
 
             st.divider()
             st.subheader("Add New User")
