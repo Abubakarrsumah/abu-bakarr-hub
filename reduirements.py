@@ -214,7 +214,7 @@ if not missing_df.empty:
         
 elif choice == "⚙️ Admin Tools":
     # 1. Check if the logged-in user is an admin
-     if st.session_state.auth == "admin"
+     if st.session_state.auth == "admin":
         st.header("🛠️ Admin Master Control")
        
         # --- FEATURE 1: USER MANAGEMENT ---
