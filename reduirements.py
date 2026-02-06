@@ -76,20 +76,23 @@ if choice == "📊 Dashboard":
         st.download_button("Download Today's Report", data=csv_data, file_name=f"Report_{today_str}.csv")
     else:
         st.info("No data for today yet.")
-elif choice == "🔌 Charging Registry":
-    # --- 🔌 Charging Registry Page Logic ---
+# --- 🔌 Charging Registry Page Logic ---
+if choice == "🔌 Charging Registry":
     st.header("🔌 Charging Registry")
+   
+    # PART 1: REGISTRATION FORM
+    with st.form("reg", clear_on_submit=True):
         st.subheader("📝 1. Register New Device")
         c1, c2 = st.columns(2)
         card = c1.selectbox("Card #", list(range(1, 101)))
         name = c2.text_input("Customer Name")
-        mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "butten phone", "power bank", "Other"])
+        mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Other"])
         fee = c2.select_slider("Select Fee (Le)", options=list(range(3, 11)))
        
         if st.form_submit_button("Save Entry"):
             new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
             cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
-            cust_df.to_csv("customer_data.csv", index=False)
+            cust_df.to_csv(DB_CUST, index=False)
             st.success(f"Card {card} saved successfully!")
             st.rerun()
 
@@ -117,13 +120,12 @@ elif choice == "🔌 Charging Registry":
             col_info.write(f"**Card {row['Card #']}**: {row['Name']} ({row['Model']})")
             if col_btn.button(f"Confirm Collection", key=f"coll_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv("customer_data.csv", index=False)
+                cust_df.to_csv(DB_CUST, index=False)
                 st.success(f"Card {row['Card #']} marked as Collected!")
                 st.rerun()
     else:
         st.info("No phones are currently charging.")
-    
-
+        
 elif choice == "🛒 Retail Shop":
     st.header("🛒 Shop Profit")
     inv_df['Profit'] = inv_df['Price'] - inv_df['Cost']
