@@ -75,7 +75,7 @@ if choice == "📊 Dashboard":
         csv_data = report_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Today's Report", data=csv_data, file_name=f"Report_{today_str}.csv")
     else:
-    st.info("No data for today yet.")
+        st.info("No data for today yet.")
 elif choice == "🔌 Charging Registry":
     # --- 🔌 Charging Registry Page Logic ---
     st.header("🔌 Charging Registry")
