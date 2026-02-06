@@ -204,7 +204,7 @@ elif choice == "🚨 Missing Cards":
     st.dataframe(missing_df, use_container_width=True)
           # Add this below your st.dataframe(missing_df)
 if not missing_df.empty:
-    if st.button("🗑️ Clear All Missing Reports"):
+  if st.button("🗑️ Clear All Missing Reports"):
         # Create an empty version of the table
         missing_df = pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"])
         # Save the empty table over the old file
@@ -215,8 +215,8 @@ if not missing_df.empty:
 elif choice == "⚙️ Admin Tools":
         st.wite("current role:", st.session_stste.get("auth"))
         # 1. Check if the logged-in user is an admin
-   if st.session_state.auth == "admin":
-      st.header("🛠️ Admin Master Control")
+    if st.session_state.auth == "admin":
+       st.header("🛠️ Admin Master Control")
        
         # --- FEATURE 1: USER MANAGEMENT ---
         with st.expander("👤 User Management"):
