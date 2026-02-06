@@ -59,31 +59,23 @@ choice = st.sidebar.radio("Go To:", menu)
 # --- 5. PAGE LOGIC (RESTORING ALL ITEMS) ---
 
 if choice == "📊 Dashboard":
-    st.header("📈 Business Performance")
+    st.header("📊 Business Performance")
     c1, c2, c3 = st.columns(3)
     c1.metric("Charging Rev", f"Le {total_rev}")
     c2.metric("Maint. Cost", f"Le {maint_df['Cost'].sum()}")
     c3.metric("Missing Cards", len(missing_df))
+   
     st.divider()
     st.subheader("📥 Daily Reports")
-
-# Filter data for only today's collections
-today_str = datetime.now().strftime("%Y-%m-%d")
-report_df = cust_df[cust_df['Date'] == today_str]
-
-     if not report_df.empty:
-     # Create the CSV data for download
-     csv_data = report_df.to_csv(index=False).encode('utf-8')
    
-    st.download_button(
-        label="📥 Download Today's Collection Report",
-        data=csv_data,
-        file_name=f"Report_{today_str}.csv",
-        mime="text/csv",
-      )
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    report_df = cust_df[cust_df['Date'] == today_str]
+   
+    if not report_df.empty:
+        csv_data = report_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Today's Report", data=csv_data, file_name=f"Report_{today_str}.csv")
     else:
-    st.info("No data available to download for today yet.")
-    
+        st.info("No data for today yet.")
 elif choice == "🔌 Charging Registry":
     # --- 🔌 Charging Registry Page Logic ---
     st.header("🔌 Charging Registry")
