@@ -71,17 +71,17 @@ if choice == "📊 Dashboard":
 today_str = datetime.now().strftime("%Y-%m-%d")
 report_df = cust_df[cust_df['Date'] == today_str]
 
-if not report_df.empty:
-    # Create the CSV data for download
-    csv_data = report_df.to_csv(index=False).encode('utf-8')
+     if not report_df.empty:
+     # Create the CSV data for download
+     csv_data = report_df.to_csv(index=False).encode('utf-8')
    
     st.download_button(
         label="📥 Download Today's Collection Report",
         data=csv_data,
         file_name=f"Report_{today_str}.csv",
         mime="text/csv",
-    )
-else:
+      )
+    else:
     st.info("No data available to download for today yet.")
     
 elif choice == "🔌 Charging Registry":
