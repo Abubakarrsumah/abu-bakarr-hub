@@ -53,9 +53,16 @@ bag2 = st.sidebar.number_input("Bag 2 (Restock)", 0.0)
 st.sidebar.success(f"💎 Bag 3 (Wealth): Le {total_rev - 124.0 - bag2 - 30}")
 if st.sidebar.button("Logout"): st.session_state.auth = None; st.rerun()
 
-menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Maintenance", "🚨 Missing Cards", "⚙️ Admin Tools"]
-choice = st.sidebar.radio("Go To:", menu)
+# --- 4. DYNAMIC SIDEBAR MENU ---
+# Standard items for all users
+menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Maintenance", "🚨 Missing Cards"]
 
+# ONLY add Admin Tools if the person logged in is 'admin'
+if st.session_state.auth == "admin":
+    menu.append("⚙️ Admin Tools")
+
+# This creates the sidebar based on the list above
+choice = st.sidebar.radio("Go To:", menu)
 # --- 5. PAGE LOGIC (RESTORING ALL ITEMS) ---
 
 if choice == "📊 Dashboard":
@@ -206,53 +213,68 @@ if not missing_df.empty:
         st.rerun()
         
 elif choice == "⚙️ Admin Tools":
-    # Only allow entry if the user is an 'admin'
+    # 1. Check if the logged-in user is an admin
     if st.session_state.auth == "admin":
         st.header("🛠️ Admin Master Control")
        
-        # 1. ADD NEW USERS & CHANGE LOGIN
-        with st.expander("🔑 User Management"):
-            st.subheader("Add New User")
+        # --- FEATURE 1: USER MANAGEMENT ---
+        with st.expander("👤 User Management"):
+            st.subheader("Add New Staff or Admin")
             new_u = st.text_input("New Username").lower().strip()
             new_p = st.text_input("New Password", type="password")
-            new_r = st.selectbox("Role", ["staff", "admin"])
+            new_r = st.selectbox("Assign Role", ["staff", "admin"])
+           
             if st.button("➕ Create User"):
-                new_user_row = {"role": new_r, "user": new_u, "pw": new_p}
-                login_df = pd.concat([login_df, pd.DataFrame([new_user_row])], ignore_index=True)
-                login_df.to_csv("login_creds.csv", index=False)
-                st.success(f"User {new_u} added!")
-                st.rerun()
+                if new_u and new_p:
+                    new_user_row = {"role": new_r, "user": new_u, "pw": new_p}
+                    # Use login_df which was loaded at the top of your script
+                    login_df = pd.concat([login_df, pd.DataFrame([new_user_row])], ignore_index=True)
+                    login_df.to_csv("login_creds.csv", index=False)
+                    st.success(f"User {new_u} added!")
+                    st.rerun()
+                else:
+                    st.warning("Please enter both a username and password.")
 
-        # 2. ADD STOCK (For Retail Shop)
-        with st.expander("📦 Inventory Management"):
-            st.subheader("Add New Stock")
-            with st.form("add_stock"):
+        # --- FEATURE 2: INVENTORY MANAGEMENT ---
+        with st.expander("📦 Shop Inventory (Add Stock)"):
+            st.subheader("Add New Stock Items")
+            with st.form("admin_inv_form"):
                 i_name = st.text_input("Item Name")
-                i_stock = st.number_input("Stock Quantity", min_value=1)
-                i_price = st.number_input("Selling Price", min_value=0.0)
-                i_cost = st.number_input("Cost Price", min_value=0.0)
-                if st.form_submit_button("Add to Shop"):
+                i_stock = st.number_input("Quantity", min_value=1)
+                i_price = st.number_input("Selling Price (Le)", min_value=0.0)
+                i_cost = st.number_input("Cost Price (Le)", min_value=0.0)
+               
+                if st.form_submit_button("📥 Add Stock"):
                     new_item = {"Item": i_name, "Stock": i_stock, "Price": i_price, "Cost": i_cost}
+                    # This fixes the Retail Shop 'empty' error
                     inv_df = pd.concat([inv_df, pd.DataFrame([new_item])], ignore_index=True)
                     inv_df.to_csv("inventory_data.csv", index=False)
                     st.success(f"Added {i_name} to inventory!")
                     st.rerun()
 
-        # 3. MASTER REPORT DOWNLOAD
+        # --- FEATURE 3: MASTER DOWNLOADS ---
         with st.expander("📊 Business Reports"):
-            st.subheader("Download Full Data")
-            full_csv = cust_df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Master Report", data=full_csv, file_name="Master_Report.csv")
+            st.subheader("Download Full System Data")
+            # We convert the current dataframes to CSV for the admin to download
+            full_report = cust_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Master Report",
+                data=full_report,
+                file_name="Master_Business_Report.csv",
+                mime="text/csv"
+            )
 
-        # 4. RESET APP HISTORY
+        # --- FEATURE 4: CLEAR HISTORY ---
         with st.expander("⚠️ Danger Zone"):
-            st.subheader("Clear App History")
-            if st.button("🗑️ RESET EVERYTHING (Clear All Data)"):
-                # This wipes the CSV files
-                for f in ["customer_data.csv", "maintenance_log.csv", "missing_cards.csv"]:
-                    pd.DataFrame().to_csv(f, index=False)
-                st.warning("All business history has been cleared!")
+            st.subheader("Clear All App Records")
+            if st.button("🗑️ RESET ALL HISTORY"):
+                # This clears the files but keeps the column headers
+                cust_df.iloc[0:0].to_csv("customer_data.csv", index=False)
+                maint_df.iloc[0:0].to_csv("maintenance_log.csv", index=False)
+                missing_df.iloc[0:0].to_csv("missing_cards.csv", index=False)
+                st.warning("All charging and maintenance history has been deleted.")
                 st.rerun()
+   
     else:
-        # If a staff member tries to click Admin Tools
-        st.error("🚫 Access Denied. Admin credentials required.")
+        # This shows if a 'staff' user tries to click Admin Tools
+        st.error("🚫 Access Denied. Only the Admin can use these tools.")
