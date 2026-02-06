@@ -86,10 +86,10 @@ elif choice == "🔌 Charging Registry":
     else:
         st.dataframe(active, use_container_width=True)
 
-         st.divider()
+        st.divider()
     # 2. Collection Confirmation
-         st.subheader("✅ 3. Confirm Collection")
-         search = st.text_input("🔍 Search Card # or Name to Confirm")
+        st.subheader("✅ 3. Confirm Collection")
+        search = st.text_input("🔍 Search Card # or Name to Confirm")
    
     to_confirm = active.copy()
     if search:
