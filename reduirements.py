@@ -81,7 +81,7 @@ elif choice == "🔌 Charging Registry":
         if st.form_submit_button("Save Entry"):
             new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
             cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
-            cust_df.to_csv(DB_CUST, index=False)
+            cust_df.to_csv("customer_data.csv", index=False)
             st.success(f"Card {card} saved successfully!")
             st.rerun()
 
@@ -109,7 +109,7 @@ elif choice == "🔌 Charging Registry":
             col_info.write(f"**Card {row['Card #']}**: {row['Name']} ({row['Model']})")
             if col_btn.button(f"Confirm Collection", key=f"coll_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv("customer_data.csv", index=false)
+                cust_df.to_csv("customer_data.csv", index=False)
                 st.success(f"Card {row['Card #']} marked as Collected!")
                 st.rerun()
     else:
@@ -123,7 +123,7 @@ elif choice == "🛒 Retail Shop":
     item_sell = st.selectbox("Sell Item", inv_df['Item'].tolist())
     if st.button("Confirm Sale"):
         idx = inv_df.index[inv_df['Item'] == item_sell][0]
-        if inv_df.at[idx, 'Stock'] > 0:
+    if inv_df.at[idx, 'Stock'] > 0:
             inv_df.at[idx, 'Stock'] -= 1
             inv_df.to_csv("inventory_data.csv", index=False); st.success("Sold!"); st.rerun()
 
