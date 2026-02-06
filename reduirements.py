@@ -59,7 +59,7 @@ menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Ma
 
 # ONLY add admin Tools if the person logged in is 'admin'
 if st.session_state.auth == "admin":
-menu.append("⚙️ admin Tools")
+   menu.append("⚙️ admin Tools")
 
 # This creates the sidebar based on the list above
 choice = st.sidebar.radio("Go To:", menu)
