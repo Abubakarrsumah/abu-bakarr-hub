@@ -167,8 +167,8 @@ elif choice == "🚨 Missing Cards":
     st.divider()
     st.subheader("📋 Missing & Destroyed Log")
     st.dataframe(missing_df, use_container_width=True)
-      # Add this below your st.dataframe(missing_df)
-      if not missing_df.empty:
+ # Add this below your st.dataframe(missing_df)
+ if not missing_df.empty:
          if st.button("🗑️ Clear All Missing Reports"):
           # Create an empty version of the table
           missing_df = pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"])
