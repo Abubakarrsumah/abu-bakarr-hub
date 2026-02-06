@@ -66,44 +66,56 @@ if choice == "📊 Dashboard":
     c3.metric("Missing Cards", len(missing_df))
 
 elif choice == "🔌 Charging Registry":
-    # 1. New Entry (Upgraded Fee & Models)
-    with st.expander("📝 1. New Entry", expanded=True):
-        with st.form("reg", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            card = col1.selectbox("Card #", list(range(0, 101)))
-            name = col2.text_input("Name")
-            mod = col1.selectbox("Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "butten phone", "power bank", "Other"])
-            fee = col2.select_slider("Fee (Le)", options=list(range(3, 11)))
-            if st.form_submit_button("Save"):
-                new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
-                cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
-                cust_df.to_csv("customer_data.csv", index=False); st.rerun()
-      # --- PART B: ACTIVE ENTRY TABLE ---
+    # --- 🔌 Charging Registry Page Logic ---
+if choice == "🔌 Charging Registry":
+    st.header("🔌 Charging Registry")
+   
+    # PART 1: REGISTRATION FORM
+    with st.form("reg", clear_on_submit=True):
+        st.subheader("📝 1. Register New Device")
+        c1, c2 = st.columns(2)
+        card = c1.selectbox("Card #", list(range(1, 101)))
+        name = c2.text_input("Customer Name")
+        mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Other"])
+        fee = c2.select_slider("Select Fee (Le)", options=list(range(3, 11)))
+       
+        if st.form_submit_button("Save Entry"):
+            new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
+            cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
+            cust_df.to_csv(DB_CUST, index=False)
+            st.success(f"Card {card} saved successfully!")
+            st.rerun()
+
+    st.divider()
+
+    # PART 2: ACTIVE ENTRY TABLE (Positioned directly below the form)
     st.subheader("📋 2. Active Charging List")
     active = cust_df[cust_df['Status'] == "Charging"]
-    if active.empty:
-        st.info("No phones are currently charging.")
-    else:
-        st.dataframe(active, use_container_width=True)
-
+   
+    if not active.empty:
+        # Show the table for full visibility
+        st.dataframe(active[["Date", "Card #", "Name", "Model", "Price"]], use_container_width=True)
+       
         st.divider()
-    # 2. Collection Confirmation
+       
+        # PART 3: COLLECTION CONFIRMATION
         st.subheader("✅ 3. Confirm Collection")
         search = st.text_input("🔍 Search Card # or Name to Confirm")
-   
-    to_confirm = active.copy()
-    if search:
-        to_confirm = to_confirm[to_confirm.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
-   
-    if not to_confirm.empty:
-        for i, row in to_confirm.iterrows():
+       
+        if search:
+            active = active[active.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+       
+        for i, row in active.iterrows():
             col_info, col_btn = st.columns([3, 1])
-            col_info.write(f"**Card {row['Card #']}**: {row['Name']} - {row['Model']}")
-            if col_btn.button(f"Confirm Collection", key=f"confirm_{i}"):
+            col_info.write(f"**Card {row['Card #']}**: {row['Name']} ({row['Model']})")
+            if col_btn.button(f"Confirm Collection", key=f"coll_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_CUST, index=True)
-                st.success(f"Card {row['Card #']} Collected!")
+                cust_df.to_csv(DB_CUST, index=False)
+                st.success(f"Card {row['Card #']} marked as Collected!")
                 st.rerun()
+    else:
+        st.info("No phones are currently charging.")
+    
 
 elif choice == "🛒 Retail Shop":
     st.header("🛒 Shop Profit")
