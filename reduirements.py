@@ -59,7 +59,7 @@ menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Ma
 
 # ONLY add admin Tools if the person logged in is 'admin'
 if st.session_state.auth == "admin":
-   menu.append("⚙️ admin Tools")
+   menu.append("⚙️ Admin Tools")
 
 # This creates the sidebar based on the list above
 choice = st.sidebar.radio("Go To:", menu)
@@ -91,15 +91,15 @@ if choice == "🔌 Charging Registry":
     with st.form("reg", clear_on_submit=True):
         st.subheader("📝 1. Register New Device")
         c1, c2 = st.columns(2)
-        card = c1.selectbox("Card #", list(range(1, 101)))
+        card = c1.selectbox("Card #", list(range(0, 101)))
         name = c2.text_input("Customer Name")
-        mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Other"])
+        mod = c1.selectbox("Phone Model", ["Infinix", "Tecno", "Samsung", "power bank", "butten phone", "iPhone", "Itel", "Other"])
         fee = c2.select_slider("Select Fee (Le)", options=list(range(3, 11)))
        
         if st.form_submit_button("Save Entry"):
             new = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": card, "Name": name, "Model": mod, "Status": "Charging", "Price": fee}
             cust_df = pd.concat([cust_df, pd.DataFrame([new])], ignore_index=True)
-            cust_df.to_csv(DB_CUST, index=False)
+            cust_df.to_csv("customer_data.csv", index=False)
             st.success(f"Card {card} saved successfully!")
             st.rerun()
 
@@ -127,7 +127,7 @@ if choice == "🔌 Charging Registry":
             col_info.write(f"**Card {row['Card #']}**: {row['Name']} ({row['Model']})")
             if col_btn.button(f"Confirm Collection", key=f"coll_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_CUST, index=False)
+                cust_df.to_csv("customer_data.csv", index=False)
                 st.success(f"Card {row['Card #']} marked as Collected!")
                 st.rerun()
     else:
@@ -146,7 +146,7 @@ elif choice == "🛒 Retail Shop":
        
         if st.button("Confirm Sale"):
             # Find the row index for the selected item
-            matching_rows = inv_df.index[inv_df['Item'] == item_sell]
+            matching_rows = inv_df.index[inv_df['I tem'] == item_sell]
            
             if not matching_rows.empty:
                 idx = matching_rows[0]  # This creates the 'idx' variable safely
@@ -212,9 +212,9 @@ if not missing_df.empty:
         st.success("Missing cards list has been cleared!")
         st.rerun()
         
-elif choice == "⚙️ Admin Tools":
+if choice == "⚙️ Admin Tools":
     # 1. Check if the logged-in user is an admin
-    if st.session_state.auth == "admin":
+    if st.session_state.auth == "admin"
         st.header("🛠️ Admin Master Control")
        
         # --- FEATURE 1: USER MANAGEMENT ---
