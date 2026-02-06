@@ -75,26 +75,10 @@ if choice == "📊 Dashboard":
         csv_data = report_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Today's Report", data=csv_data, file_name=f"Report_{today_str}.csv")
     else:
-        st.info("No data for today yet.")
+    st.info("No data for today yet.")
 elif choice == "🔌 Charging Registry":
     # --- 🔌 Charging Registry Page Logic ---
     st.header("🔌 Charging Registry")
-elif choice == "📊 Dashboard":
-    st.header("📊 Business Performance")
-   
-    # Calculate daily stats
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    daily_collected = cust_df[(cust_df['Status'] == "Collected ✅") & (cust_df['Date'] == today_str)]
-    daily_count = len(daily_collected)
-    daily_money = daily_collected['Price'].sum()
-
-    # Dashboard Metrics
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Rev (All Time)", f"Le {total_rev}")
-    c2.metric("Collected Today", f"{daily_count} Devices") # New Counter
-    c3.metric("Daily Earnings", f"Le {daily_money}")   
-    # PART 1: REGISTRATION FORM
-    with st.form("reg", clear_on_submit=True):
         st.subheader("📝 1. Register New Device")
         c1, c2 = st.columns(2)
         card = c1.selectbox("Card #", list(range(1, 101)))
