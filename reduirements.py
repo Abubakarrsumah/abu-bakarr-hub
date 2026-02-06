@@ -204,6 +204,7 @@ if not missing_df.empty:
         missing_df.to_csv("missing_cards.csv", index=False)
         st.success("Missing cards list has been cleared!")
         st.rerun()
+        
 elif choice == "⚙️ Admin Tools":
     if st.session_state.auth == "admin":
         st.header("🛠️ Admin Master Control")
