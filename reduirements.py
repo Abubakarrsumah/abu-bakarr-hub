@@ -109,7 +109,7 @@ elif choice == "🔌 Charging Registry":
             col_info.write(f"**Card {row['Card #']}**: {row['Name']} ({row['Model']})")
             if col_btn.button(f"Confirm Collection", key=f"coll_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_CUST, index=False)
+                cust_df.to_csv("coustomer_data.csv", index=false)
                 st.success(f"Card {row['Card #']} marked as Collected!")
                 st.rerun()
     else:
