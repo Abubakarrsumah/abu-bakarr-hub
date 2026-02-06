@@ -128,15 +128,33 @@ if choice == "🔌 Charging Registry":
         
 elif choice == "🛒 Retail Shop":
     st.header("🛒 Shop Profit")
+   
+    # Calculate profit for display
     inv_df['Profit'] = inv_df['Price'] - inv_df['Cost']
     st.dataframe(inv_df, use_container_width=True)
-    item_sell = st.selectbox("Sell Item", inv_df['Item'].tolist())
-    if st.button("Confirm Sale"):
-        idx = inv_df.index[inv_df['Item'] == item_sell][0]
-    if inv_df.at[idx, 'Stock'] > 0:
-            inv_df.at[idx, 'Stock'] -= 1
-            inv_df.to_csv("inventory_data.csv", index=False); st.success("Sold!"); st.rerun()
-
+   
+    # Check if inventory is empty
+    if not inv_df.empty:
+        item_sell = st.selectbox("Sell Item", inv_df['Item'].tolist())
+       
+        if st.button("Confirm Sale"):
+            # Find the row index for the selected item
+            matching_rows = inv_df.index[inv_df['Item'] == item_sell]
+           
+            if not matching_rows.empty:
+                idx = matching_rows[0]  # This creates the 'idx' variable safely
+               
+                if inv_df.at[idx, 'Stock'] > 0:
+                    inv_df.at[idx, 'Stock'] -= 1
+                    inv_df.to_csv("inventory_data.csv", index=False)
+                    st.success(f"Sold 1 {item_sell}!")
+                    st.rerun()
+                else:
+                    st.error("Out of Stock!")
+            else:
+                st.error("Item not found in inventory.")
+    else:
+        st.info("Your inventory is empty. Add items in Admin Tools.")
 elif choice == "🔧 Maintenance":
     st.header("🔧 Machine & Oil Log") # Restored!
     with st.form("m_form"):
