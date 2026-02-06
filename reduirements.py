@@ -215,8 +215,8 @@ if not missing_df.empty:
 elif choice == "⚙️ Admin Tools":
         st.wite("current role:", st.session_stste.get("auth"))
         # 1. Check if the logged-in user is an admin
-        if st.session_state.auth == "admin":
-        st.header("🛠️ Admin Master Control")
+   if st.session_state.auth == "admin":
+      st.header("🛠️ Admin Master Control")
        
         # --- FEATURE 1: USER MANAGEMENT ---
         with st.expander("👤 User Management"):
