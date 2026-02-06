@@ -167,7 +167,15 @@ elif choice == "🚨 Missing Cards":
     st.divider()
     st.subheader("📋 Missing & Destroyed Log")
     st.dataframe(missing_df, use_container_width=True)
-
+      # Add this below your st.dataframe(missing_df)
+      if not missing_df.empty:
+         if st.button("🗑️ Clear All Missing Reports"):
+          # Create an empty version of the table
+          missing_df = pd.DataFrame(columns=["Date", "Card #", "Reason", "Staff"])
+          # Save the empty table over the old file
+          missing_df.to_csv("missing_cards.csv", index=False)
+          st.success("Missing cards list has been cleared!")
+          st.rerun()
 elif choice == "⚙️ Admin Tools":
     if st.session_state.auth == "admin":
         st.header("🛠️ Admin Master Control")
