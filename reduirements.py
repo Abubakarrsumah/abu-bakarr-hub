@@ -140,15 +140,33 @@ elif choice == "🔧 Maintenance":
     st.dataframe(maint_df)
 
 elif choice == "🚨 Missing Cards":
-    st.header("🚨 Missing Card Report") # Restored!
+    st.header("🚨 Missing Card Report")
+   
+    # Form to report a new problem
     with st.form("ms_form"):
-        mc = st.selectbox("Card #", list(range(1, 101)))
-        rsn = st.text_input("Reason")
-        if st.form_submit_button("Report"):
-            ms_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Card #": mc, "Reason": rsn, "Staff": st.session_state.auth}
+        mc = st.selectbox("Select Card #", list(range(1, 101)))
+        rsn = st.selectbox("Reason", ["Missing", "Destroyed", "Damaged", "Lost"]) # Dropdown is easier for staff
+        details = st.text_input("Additional Details (Optional)")
+       
+        if st.form_submit_button("Submit Report"):
+            ms_row = {
+                "Date": datetime.now().strftime("%Y-%m-%d"),
+                "Card #": mc,
+                "Reason": f"{rsn}: {details}" if details else rsn,
+                "Staff": st.session_state.auth
+            }
+            # Add to the existing missing_df
             missing_df = pd.concat([missing_df, pd.DataFrame([ms_row])], ignore_index=True)
-            missing_df.to_csv("missing_cards.csv", index=False); st.success("Reported!"); st.rerun()
-    st.dataframe(missing_df)
+           
+            # SAVE: Note the capital 'F' in False
+            missing_df.to_csv("missing_cards.csv", index=False)
+           
+            st.success(f"Reported: Card {mc} is {rsn}")
+            st.rerun()
+
+    st.divider()
+    st.subheader("📋 Missing & Destroyed Log")
+    st.dataframe(missing_df, use_container_width=True)
 
 elif choice == "⚙️ Admin Tools":
     if st.session_state.auth == "admin":
