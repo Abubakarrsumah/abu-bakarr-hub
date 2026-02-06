@@ -212,7 +212,7 @@ if not missing_df.empty:
         st.success("Missing cards list has been cleared!")
         st.rerun()
         
-if choice == "⚙️ Admin Tools":
+ if choice == "⚙️ Admin Tools":
     st.write("current role:", st.session_state.get("auth"))
    
     # 1. Check if the logged-in user is an admin
@@ -275,6 +275,6 @@ if choice == "⚙️ Admin Tools":
                 st.warning("All charging and maintenance history has been deleted.")
                 st.rerun()
    
-     else:
+ else:
         # This shows if a 'staff' user tries to click Admin Tools
         st.error("🚫 Access Denied. Only the Admin can use these tools.")
