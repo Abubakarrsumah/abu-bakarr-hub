@@ -275,6 +275,6 @@ elif choice == "⚙️ Admin Tools":
                 st.warning("All charging and maintenance history has been deleted.")
                 st.rerun()
    
-           else:
-               # This shows if a 'staff' user tries to click Admin Tools
-               st.error("🚫 Access Denied. Only the Admin can use these tools.")
+     else:
+        # This shows if a 'staff' user tries to click Admin Tools
+        st.error("🚫 Access Denied. Only the Admin can use these tools.")
