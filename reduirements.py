@@ -64,8 +64,8 @@ if choice == "📊 Dashboard":
     c1.metric("Charging Rev", f"Le {total_rev}")
     c2.metric("Maint. Cost", f"Le {maint_df['Cost'].sum()}")
     c3.metric("Missing Cards", len(missing_df))
-st.divider()
-st.subheader("📥 Daily Reports")
+   st.divider()
+   st.subheader("📥 Daily Reports")
 
 # Filter data for only today's collections
 today_str = datetime.now().strftime("%Y-%m-%d")
