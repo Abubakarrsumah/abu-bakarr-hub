@@ -67,7 +67,6 @@ if choice == "📊 Dashboard":
 
 elif choice == "🔌 Charging Registry":
     # --- 🔌 Charging Registry Page Logic ---
-if choice == "🔌 Charging Registry":
     st.header("🔌 Charging Registry")
    
     # PART 1: REGISTRATION FORM
