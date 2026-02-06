@@ -57,9 +57,9 @@ if st.sidebar.button("Logout"): st.session_state.auth = None; st.rerun()
 # Standard items for all users
 menu = ["📊 Dashboard", "🔌 Charging Registry", "🛒 Retail Shop", "🔧 Maintenance", "🚨 Missing Cards"]
 
-# ONLY add Admin Tools if the person logged in is 'admin'
+# ONLY add admin Tools if the person logged in is 'admin'
 if st.session_state.auth == "admin":
-    menu.append("⚙️ Admin Tools")
+menu.append("⚙️ admin Tools")
 
 # This creates the sidebar based on the list above
 choice = st.sidebar.radio("Go To:", menu)
