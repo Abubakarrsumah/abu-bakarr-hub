@@ -101,7 +101,7 @@ elif choice == "🔌 Charging Registry":
             col_info.write(f"**Card {row['Card #']}**: {row['Name']} - {row['Model']}")
             if col_btn.button(f"Confirm Collection", key=f"confirm_{i}"):
                 cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_CUST, index=False)
+                cust_df.to_csv(DB_CUST, index=True)
                 st.success(f"Card {row['Card #']} Collected!")
                 st.rerun()
 
@@ -148,7 +148,39 @@ elif choice == "⚙️ Admin Tools":
             if st.button("Update"):
                 login_df.loc[login_df['role'] == role, ['user', 'pw']] = [nu, np]
                 login_df.to_csv("login_creds.csv", index=False); st.success("Updated")
-       
+       # --- NEW USER MANAGEMENT SECTION ---
+        with st.expander("👤 User Management (Add/Delete)"):
+            st.subheader("Current Users")
+            for idx, row in login_df.iterrows():
+                col_u, col_r, col_d = st.columns([2, 2, 1])
+                col_u.write(f"**User:** {row['user']}")
+                col_r.write(f"**Role:** {row['role']}")
+                # Prevent Admin from deleting themselves to avoid being locked out
+                if row['user'] != st.session_state.auth:
+                    if col_d.button("Delete", key=f"del_{idx}"):
+                        login_df = login_df.drop(idx)
+                        login_df.to_csv("login_creds.csv", index=False)
+                        st.success(f"User {row['user']} deleted!")
+                        st.rerun()
+
+            st.divider()
+            st.subheader("Add New User")
+            new_u = st.text_input("New Username", key="new_u_input").lower().strip()
+            new_p = st.text_input("New Password", type="password", key="new_p_input")
+            new_r = st.selectbox("Assign Role", ["staff", "admin"])
+           
+            if st.button("➕ Create User"):
+                if new_u and new_p:
+                    if new_u in login_df['user'].values:
+                        st.error("Username already exists!")
+                    else:
+                        new_user_row = {"role": new_r, "user": new_u, "pw": new_p}
+                        login_df = pd.concat([login_df, pd.DataFrame([new_user_row])], ignore_index=True)
+                        login_df.to_csv("login_creds.csv", index=False)
+                        st.success(f"User {new_u} created as {new_r}!")
+                        st.rerun()
+                else:
+                    st.warning("Please enter both username and password.")
         st.divider()
         st.subheader("♻️ RESET ALL DATA (Clear History)") # Restored!
         if st.button("♻️ DANGER: RESET EVERYTHING"):
