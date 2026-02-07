@@ -271,8 +271,7 @@ if choice == "⚙️ Admin Tools":
       # --- LIVE INVENTORY VIEW ---
         st.divider()
         st.subheader("📊 Current Stock Levels")
-
-       if not inv_df.empty:
+    if not inv_df.empty:
             # 1. Calculate Total Value (Stock * Price) and Total Cost (Stock * Cost)
             inv_df['Total Value (Le)'] = inv_df['Stock'] * inv_df['Price']
             inv_df['Total Cost (Le)'] = inv_df['Stock'] * inv_df['Cost']
@@ -288,8 +287,8 @@ if choice == "⚙️ Admin Tools":
             with col2:
                 total_revenue_potential = inv_df['Total Value (Le)'].sum()
                 st.metric("Total Potential Revenue", f"Le {total_revenue_potential:,.2f}")
-       else:
-            st.info("Your inventory is currently empty. Add items above to see them here.")  
+    else:
+         st.info("Your inventory is currently empty. Add items above to see them here.")  
 
         # --- FEATURE 3: MASTER DOWNLOADS ---
         with st.expander("📊 Business Reports"):
