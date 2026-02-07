@@ -235,23 +235,20 @@ if choice == "⚙️ Admin Tools":
                     st.rerun()
                 else:
                     st.warning("Please enter both a username and password.")
-        # --- DELETE USER SECTION ---
+       # --- DELETE USER SECTION --- (Ensure this is indented!)
         st.divider()
         st.subheader("🗑️ Delete Existing User")
        
-        # Create a list of usernames to choose from
         user_list = login_df['user'].tolist()
-        user_to_delete = st.selectbox("Select User to Remove", user_list)
+        user_to_delete = st.selectbox("Select User to Remove", user_list, key="del_user_box")
 
         if st.button("❌ Remove User"):
-            # Prevent the admin from deleting their own account accidentally
-            if user_to_delete == st.session_state.user:
+            # Use .get() to avoid the AttributeError
+            if user_to_delete == st.session_state.get("username"):
                 st.error("You cannot delete your own admin account while logged in!")
             else:
-                # Remove the selected user
+                # Remove the user and save
                 login_df = login_df[login_df['user'] != user_to_delete]
-               
-                # Save the updated list back to the CSV
                 login_df.to_csv("login_creds.csv", index=False)
                 st.success(f"User '{user_to_delete}' has been deleted.")
                 st.rerun()
