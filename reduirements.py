@@ -268,28 +268,28 @@ if choice == "⚙️ Admin Tools":
                     inv_df.to_csv("inventory_data.csv", index=False)
                     st.success(f"Added {i_name} to inventory!")
                     st.rerun()
-      # --- LIVE INVENTORY VIEW ---
+      # --- LIVE INVENTORY VIEW --- (INDENT THIS SECTION!)
         st.divider()
         st.subheader("📊 Current Stock Levels")
-    if not inv_df.empty:
-            # 1. Calculate Total Value (Stock * Price) and Total Cost (Stock * Cost)
+       
+        if not inv_df.empty:
+            # 1. Calculate Values
             inv_df['Total Value (Le)'] = inv_df['Stock'] * inv_df['Price']
             inv_df['Total Cost (Le)'] = inv_df['Stock'] * inv_df['Cost']
-
-            # 2. Display the data table
+           
+            # 2. Display Table
             st.dataframe(inv_df, use_container_width=True)
-
-            # 3. Show Summary Metrics
+           
+            # 3. Show Metrics
             col1, col2 = st.columns(2)
             with col1:
-                total_investment = inv_df['Total Cost (Le)'].sum()
-                st.metric("Total Investment (Cost)", f"Le {total_investment:,.2f}")
+                t_inv = inv_df['Total Cost (Le)'].sum()
+                st.metric("Total Investment", f"Le {t_inv:,.2f}")
             with col2:
-                total_revenue_potential = inv_df['Total Value (Le)'].sum()
-                st.metric("Total Potential Revenue", f"Le {total_revenue_potential:,.2f}")
-    else:
-         st.info("Your inventory is currently empty. Add items above to see them here.")  
-
+                t_rev = inv_df['Total Value (Le)'].sum()
+                st.metric("Potential Revenue", f"Le {t_rev:,.2f}")
+        else:
+            st.info("Your inventory is currently empty.")
         # --- FEATURE 3: MASTER DOWNLOADS ---
         with st.expander("📊 Business Reports"):
             st.subheader("Download Full System Data")
