@@ -44,12 +44,27 @@ if not st.session_state.auth:
         else: st.error("Unauthorized Access Attempt Blocked")
     st.stop()
 
-# --- 3. GLOBAL DATA LOADING ---
-cust_df = pd.read_csv(DB_FILES["cust"])
-inv_df = pd.read_csv(DB_FILES["inv"])
-maint_df = pd.read_csv(DB_FILES["maint"])
-login_df = pd.read_csv(DB_FILES["login"])
-
+# --- 3. GLOBAL DATA LOADING (FIXED FOR LINE 48) ---
+def load_safe(key, cols):
+    file_path = DB_FILES[key]
+    # Check if file exists AND if it has data inside
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+        try:
+            return pd.read_csv(file_path)
+        except pd.errors.EmptyDataError:
+            # If it's still empty despite the check, fall through to create new
+            pass
+   
+    # Create a fresh table if the file is missing or empty
+    if key == "login":
+        df = pd.DataFrame([{"role": "admin", "user": "admin", "pw": "abu123"}])
+    elif key == "inv":
+        df = pd.DataFrame(columns=["Item", "Stock", "Price", "Cost"])
+    else:
+        df = pd.DataFrame(columns=cols)
+   
+    df.to_csv(file_path, index=False)
+    return df
 # --- 4. SIDEBAR (3-BAG SYSTEM & KRIO AI) ---
 st.sidebar.title("💎 3-BAG SYSTEM")
 total_revenue = cust_df['Price'].sum() if 'Price' in cust_df.columns else 0
