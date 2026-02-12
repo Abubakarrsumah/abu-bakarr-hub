@@ -77,23 +77,29 @@ if choice == "🔌 Charging Registry":
         name = col2.text_input("Customer Name")
         item_type = col1.selectbox("Device Type", ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Power Bank", "Bluetooth Speaker", "Button Phone", "Tablet"])
         fee = col2.select_slider("Price (Le)", options=list(range(3, 11)))
+        
         if st.form_submit_button("Register & Generate Receipt"):
             new_row = pd.DataFrame([{"Date": datetime.now().strftime("%Y-%m-%d %H:%M"), "Card": card, "Name": name, "Item": item_type, "Price": fee, "Status": "Charging"}])
             cust_df = pd.concat([cust_df, new_row], ignore_index=True)
             cust_df.to_csv(DB_FILES["cust"], index=False)
             st.success("Entry Saved Offline & Online Sync Ready!")
+            st.rerun()
 
     st.subheader("📋 Active Queue")
     if not cust_df.empty:
         active = cust_df[cust_df['Status'] == "Charging"]
-        st.dataframe(active, use_container_width=True)
-        for i, row in active.iterrows():
-            c1, c2 = st.columns([3, 1])
-            c1.write(f"**Card {row['Card']}** | {row['Name']} ({row['Item']})")
-            if c2.button("Confirm Collection", key=f"coll_{i}"):
-                cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_FILES["cust"], index=False)
-                st.rerun()
+        if not active.empty:
+            st.dataframe(active, use_container_width=True)
+            for i, row in active.iterrows():
+                c1, c2 = st.columns([3, 1])
+                c1.write(f"**Card {row['Card']}** | {row['Name']} ({row['Item']})")
+                if c2.button("Confirm Collection", key=f"coll_{i}"):
+                    cust_df.at[i, 'Status'] = "Collected ✅"
+                    cust_df.to_csv(DB_FILES["cust"], index=False)
+                    st.rerun()
+        else:
+            st.info("No phones are currently charging.")
+
 
 # --- 6. RETAIL & POS (ADMIN ONLY ADDITION) ---
 elif choice == "🛒 Retail & POS":
@@ -265,4 +271,5 @@ elif choice == "⚙️ Master Control":
             st.success("History Wiped!")
 
     else: st.error("Access Denied: Admin Only")
+
 
