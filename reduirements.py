@@ -182,45 +182,6 @@ elif choice == "⚡ Charging Registry":
                 st.rerun()
 
     st.divider()
-    # 2. THE PROFESSIONAL ACTIVE TABLE
-st.subheader("📋 Active Queue")
-
-# Filter for items currently in the shop
-# This prevents crashes if the file is new or empty
-if 'Status' in cust_df.columns:
-    active_df = cust_df[cust_df['Status'] == "Charging"]
-else:
-    active_df = pd.DataFrame()
-
-if active_df.empty:
-    st.info("No devices are currently in the shop.")
-else:
-    # Table Header UI
-    h1, h2, h3 = st.columns([1, 3, 2])
-    h1.write("**Card**")
-    h2.write("**Customer Details**")
-    h3.write("**Action**")
-    st.markdown("---")
-
-    # Table Rows
-    for idx, row in active_df.iterrows():
-        r1, r2, r3 = st.columns([1, 3, 2])
-        
-        # Column 1: Card ID
-        r1.warning(f"#{row.get('Card', 'N/A')}")
-        
-        # Column 2: Customer & Device Info
-        r2.markdown(f"**{row.get('Name', 'Unknown')}**")
-        r2.caption(f"{row.get('Device', 'Device')} | Le {row.get('Price', '0')}")
-        
-        # Column 3: Collection Button
-        if r3.button("Collected ✅", key=f"col_{idx}", use_container_width=True):
-            cust_df.at[idx, 'Status'] = "Collected"
-            save_data("cust", cust_df)
-            st.rerun()
-            
-        st.markdown("<hr style='margin:2px; opacity:0.1'>", unsafe_allow_html=True)
-
     st.subheader("📋 Active Devices (Confirm Collection)")
     
     active_df = cust_df[cust_df['Status'] == "Charging"]
@@ -240,7 +201,7 @@ else:
                     st.rerun()
     else:
         st.info("No devices currently charging.")
-        
+
 # --- 8. RETAIL SHOP (POS) ---
 elif choice == "🛒 Retail Shop":
     st.header("🛒 Retail Shop POS")
@@ -321,4 +282,3 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
-
