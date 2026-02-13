@@ -160,47 +160,46 @@ if choice == "📊 Dashboard & WhatsApp":
     whatsapp_url = f"https://wa.me/?text={report_text.replace(' ', '%20').replace(chr(10), '%0A')}"
     st.link_button("📤 Send Report via WhatsApp", whatsapp_url)
 
-# --- 7. CHARGING REGISTRY ---
-elif choice == "⚡ Charging Registry":
-    st.header("⚡ Charging Station")
+
+# --- 7. CHARGING HUB (WITH COLLECTION TRACKING & TABLE) ---
+if choice == "⚡ Charging Hub":
+    st.header("⚡ Master Charging Registry")
     
-    with st.expander("➕ Register New Device", expanded=True):
+    with st.expander("📝 Register New Device Entry", expanded=True):
         with st.form("charge_form", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            card = c1.selectbox("🎫 Card Number", list(range(1, 101)))
-            name = c2.text_input("👤 Customer Name")
-            dev_types = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Bluetooth Speaker", "Tablet", "Laptop"]
-            device = c1.selectbox("📱 Device Type", dev_types)
-            price = c2.select_slider("💵 Price (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10, 15, 20])
+            c1, c2, c3 = st.columns(3)
+            card = c1.selectbox("Card Number", list(range(0, 101)))
+            name = c2.text_input("Customer Name")
+            device_list = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Bluetooth Speaker", "Tablet"]
+            device = c3.selectbox("Device Type", device_list)
+            price = c1.select_slider("Fee (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10])
             
-            if st.form_submit_button("✅ CHECK-IN DEVICE"):
-                new_row = {"Date": datetime.now().strftime("%Y-%m-%d %H:%M"), "Card": card, "Name": name, 
-                           "Device": device, "Price": price, "Status": "Charging", "Staff": safe_user}
-                cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
+            if st.form_submit_button("✅ SAVE & PRINT RECEIPT"):
+                new_entry = pd.DataFrame([{"Date": datetime.now().strftime("%Y-%m-%d"), "Card": card, "Name": name, 
+                                           "Device": device, "Price": price, "Status": "Charging", "Staff": st.session_state.user}])
+                cust_df = pd.concat([cust_df, new_entry], ignore_index=True)
                 save_data("cust", cust_df)
-                st.success(f"Card {card} Checked In!")
+                st.success(f"Receipt Generated for Card {card}!")
                 st.rerun()
 
-    st.divider()
-    st.subheader("📋 Active Devices (Confirm Collection)")
-    
-    active_df = cust_df[cust_df['Status'] == "Charging"]
-    if not active_df.empty:
-        search = st.text_input("🔍 Search Name or Card...")
-        if search:
-            active_df = active_df[active_df['Name'].str.contains(search, case=False) | active_df['Card'].astype(str).str.contains(search)]
-            
-        for idx, row in active_df.iterrows():
-            with st.container():
-                col_det, col_btn = st.columns([3, 1])
-                col_det.info(f"**#{row['Card']}** | {row['Name']} | {row['Device']} (Le {row['Price']})")
-                if col_btn.button("✅ RETURN", key=f"ret_{idx}"):
-                    cust_df.at[idx, 'Status'] = "Collected"
-                    save_data("cust", cust_df)
-                    st.success("Returned!")
-                    st.rerun()
-    else:
-        st.info("No devices currently charging.")
+    st.subheader("📋 Active Charging Queue")
+    # Search Filter
+    search = st.text_input("🔍 Search Card or Name")
+    display_df = cust_df[cust_df['Status'] == "Charging"]
+    if search: display_df = display_df[display_df['Name'].str.contains(search, case=False) | display_df['Card'].astype(str).contains(search)]
+
+    if not display_df.empty:
+        for idx, row in display_df.iterrows():
+            col_info, col_btn = st.columns([4, 1])
+            col_info.warning(f"🎫 **Card {row['Card']}** | {row['Name']} ({row['Device']}) | Le {row['Price']}")
+            if col_btn.button("Confirm Collection ✅", key=f"col_{idx}"):
+                cust_df.at[idx, 'Status'] = "Collected"
+                save_data("cust", cust_df)
+                st.rerun()
+    else: st.info("No devices are currently in the shop.")
+
+    st.subheader("📊 Full History Table")
+    st.dataframe(cust_df, use_container_width=True)
 
 # --- 8. RETAIL SHOP (POS) ---
 elif choice == "🛒 Retail Shop":
@@ -282,3 +281,4 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
+
