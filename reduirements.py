@@ -23,12 +23,11 @@ DB_FILES = {
 
 def init_system():
     """Checks and repairs all database files before the app starts."""
-    # Define the exact columns needed for the Charging Registry
-    required_cust_cols = ["Date", "Card", "Name", "Device", "Price", "Status", "Staff"]
-    
     for key, path in DB_FILES.items():
         if not os.path.exists(path) or os.stat(path).st_size == 0:
+            # Auto-Repair: Create fresh files with correct headers
             if key == "login":
+                # DEFAULT LOGIN: Admin (Master) and Staff (Worker)
                 df = pd.DataFrame([
                     {"role": "admin", "user": "admin", "pw": "abu123"},
                     {"role": "staff", "user": "staff", "pw": "hub456"}
@@ -36,18 +35,10 @@ def init_system():
             elif key == "inv":
                 df = pd.DataFrame(columns=["Item", "Stock", "Price", "Cost"])
             elif key == "cust":
-                df = pd.DataFrame(columns=required_cust_cols)
+                df = pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status", "Staff"])
             else:
-                df = pd.DataFrame(columns=["Date", "Action", "Cost"])
+                df = pd.DataFrame(columns=["Date", "Action", "Cost", "Note"])
             df.to_csv(path, index=False)
-        else:
-            # Repair existing files if columns are missing (fixes KeyErrors)
-            if key == "cust":
-                df = pd.read_csv(path)
-                for col in required_cust_cols:
-                    if col not in df.columns:
-                        df[col] = "N/A"
-                df.to_csv(path, index=False)
 
 init_system()
 
@@ -170,93 +161,85 @@ if choice == "📊 Dashboard & WhatsApp":
     st.link_button("📤 Send Report via WhatsApp", whatsapp_url)
 
 # --- 7. CHARGING REGISTRY ---
-elif choice == "⚡ Charging Hub":
+elif choice == "⚡ Charging Registry":
     st.header("⚡ Charging Station")
-
-    # 1. NEW ENTRY FORM
+    
     with st.expander("➕ Register New Device", expanded=True):
         with st.form("charge_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
             card = c1.selectbox("🎫 Card Number", list(range(1, 101)))
             name = c2.text_input("👤 Customer Name")
-            
-            # Common devices in Sierra Leone
-            dev_types = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Tablet", "Other"]
+            dev_types = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Bluetooth Speaker", "Tablet", "Laptop"]
             device = c1.selectbox("📱 Device Type", dev_types)
-            price = c2.select_slider("💵 Price (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10])
+            price = c2.select_slider("💵 Price (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10, 15, 20])
             
             if st.form_submit_button("✅ CHECK-IN DEVICE"):
-                if name.strip() == "":
-                    st.error("Please enter a customer name!")
-                else:
-                    new_row = {
-                        "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Card": card,
-                        "Name": name,
-                        "Device": device,
-                        "Price": price,
-                        "Status": "Charging",
-                        "Staff": st.session_state.user # Fixed the naming error here
-                    }
-                    cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
-                    save_data("cust", cust_df)
-                    st.success(f"Card {card} Checked In!")
-                    st.rerun()
+                new_row = {"Date": datetime.now().strftime("%Y-%m-%d %H:%M"), "Card": card, "Name": name, 
+                           "Device": device, "Price": price, "Status": "Charging", "Staff": safe_user}
+                cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
+                save_data("cust", cust_df)
+                st.success(f"Card {card} Checked In!")
+                st.rerun()
 
     st.divider()
-
     # 2. THE PROFESSIONAL ACTIVE TABLE
-    st.subheader("📋 Active Queue (In Shop)")
-    
-    # Check if data is empty to prevent the "EmptyDataError"
-    if cust_df.empty:
-        st.info("No records found. Start by registering a device above.")
-    else:
-        # Filter for only devices currently in the shop
-        active_df = cust_df[cust_df['Status'] == "Charging"]
+st.subheader("📋 Active Queue")
+
+# Filter for items currently in the shop
+# This prevents crashes if the file is new or empty
+if 'Status' in cust_df.columns:
+    active_df = cust_df[cust_df['Status'] == "Charging"]
+else:
+    active_df = pd.DataFrame()
+
+if active_df.empty:
+    st.info("No devices are currently in the shop.")
+else:
+    # Table Header UI
+    h1, h2, h3 = st.columns([1, 3, 2])
+    h1.write("**Card**")
+    h2.write("**Customer Details**")
+    h3.write("**Action**")
+    st.markdown("---")
+
+    # Table Rows
+    for idx, row in active_df.iterrows():
+        r1, r2, r3 = st.columns([1, 3, 2])
         
-        if active_df.empty:
-            st.success("🎉 All devices have been collected! Shop is clear.")
-        else:
-            # Search Bar for busy days
-            search = st.text_input("🔍 Search Name or Card Number")
-            if search:
-                active_df = active_df[
-                    active_df['Name'].str.contains(search, case=False) | 
-                    active_df['Card'].astype(str).contains(search)
-                ]
+        # Column 1: Card ID
+        r1.warning(f"#{row.get('Card', 'N/A')}")
+        
+        # Column 2: Customer & Device Info
+        r2.markdown(f"**{row.get('Name', 'Unknown')}**")
+        r2.caption(f"{row.get('Device', 'Device')} | Le {row.get('Price', '0')}")
+        
+        # Column 3: Collection Button
+        if r3.button("Collected ✅", key=f"col_{idx}", use_container_width=True):
+            cust_df.at[idx, 'Status'] = "Collected"
+            save_data("cust", cust_df)
+            st.rerun()
+            
+        st.markdown("<hr style='margin:2px; opacity:0.1'>", unsafe_allow_html=True)
 
-            # Professional Table Header
-            h1, h2, h3 = st.columns([1, 3, 2])
-            h1.write("**Card**")
-            h2.write("**Customer & Device**")
-            h3.write("**Action**")
-            st.markdown("---")
-
-            # Table Rows
-            for idx, row in active_df.iterrows():
-                r1, r2, r3 = st.columns([1, 3, 2])
-                
-                # Column 1: Card Number in Bold
-                r1.subheader(f"#{row['Card']}")
-                
-                # Column 2: Name and Device details
-                r2.write(f"👤 **{row['Name']}**")
-                r2.caption(f"📱 {row['Device']} | 💰 Le {row['Price']}")
-                
-                # Column 3: Big "Collect" Button for mobile users
-                if r3.button("✅ Collected", key=f"col_{idx}", use_container_width=True):
+    st.subheader("📋 Active Devices (Confirm Collection)")
+    
+    active_df = cust_df[cust_df['Status'] == "Charging"]
+    if not active_df.empty:
+        search = st.text_input("🔍 Search Name or Card...")
+        if search:
+            active_df = active_df[active_df['Name'].str.contains(search, case=False) | active_df['Card'].astype(str).str.contains(search)]
+            
+        for idx, row in active_df.iterrows():
+            with st.container():
+                col_det, col_btn = st.columns([3, 1])
+                col_det.info(f"**#{row['Card']}** | {row['Name']} | {row['Device']} (Le {row['Price']})")
+                if col_btn.button("✅ RETURN", key=f"ret_{idx}"):
                     cust_df.at[idx, 'Status'] = "Collected"
                     save_data("cust", cust_df)
-                    st.toast(f"Card {row['Card']} marked as collected!")
+                    st.success("Returned!")
                     st.rerun()
-                st.markdown("<hr style='margin:0; opacity:0.2;'>", unsafe_allow_html=True)
-
-    # 3. FULL HISTORY (Admin Only or Hidden in Expander)
-    with st.expander("📜 View All-Time History"):
-        # This shows a standard professional table for deep records
-        st.dataframe(cust_df, use_container_width=True, hide_index=True)
-
+    else:
+        st.info("No devices currently charging.")
 
 # --- 8. RETAIL SHOP (POS) ---
 elif choice == "🛒 Retail Shop":
@@ -338,4 +321,3 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
-
