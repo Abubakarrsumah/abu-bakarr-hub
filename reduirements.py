@@ -240,7 +240,7 @@ else:
                     st.rerun()
     else:
         st.info("No devices currently charging.")
-
+        
 # --- 8. RETAIL SHOP (POS) ---
 elif choice == "🛒 Retail Shop":
     st.header("🛒 Retail Shop POS")
@@ -321,3 +321,4 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
+
