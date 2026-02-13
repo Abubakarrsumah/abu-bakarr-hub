@@ -23,11 +23,12 @@ DB_FILES = {
 
 def init_system():
     """Checks and repairs all database files before the app starts."""
+    # Define the exact columns needed for the Charging Registry
+    required_cust_cols = ["Date", "Card", "Name", "Device", "Price", "Status", "Staff"]
+    
     for key, path in DB_FILES.items():
         if not os.path.exists(path) or os.stat(path).st_size == 0:
-            # Auto-Repair: Create fresh files with correct headers
             if key == "login":
-                # DEFAULT LOGIN: Admin (Master) and Staff (Worker)
                 df = pd.DataFrame([
                     {"role": "admin", "user": "admin", "pw": "abu123"},
                     {"role": "staff", "user": "staff", "pw": "hub456"}
@@ -35,10 +36,18 @@ def init_system():
             elif key == "inv":
                 df = pd.DataFrame(columns=["Item", "Stock", "Price", "Cost"])
             elif key == "cust":
-                df = pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status", "Staff"])
+                df = pd.DataFrame(columns=required_cust_cols)
             else:
-                df = pd.DataFrame(columns=["Date", "Action", "Cost", "Note"])
+                df = pd.DataFrame(columns=["Date", "Action", "Cost"])
             df.to_csv(path, index=False)
+        else:
+            # Repair existing files if columns are missing (fixes KeyErrors)
+            if key == "cust":
+                df = pd.read_csv(path)
+                for col in required_cust_cols:
+                    if col not in df.columns:
+                        df[col] = "N/A"
+                df.to_csv(path, index=False)
 
 init_system()
 
@@ -329,3 +338,4 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
+
