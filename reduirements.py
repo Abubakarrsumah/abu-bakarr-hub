@@ -161,7 +161,7 @@ if choice == "📊 Dashboard & WhatsApp":
     st.link_button("📤 Send Report via WhatsApp", whatsapp_url)
 
 
-# --- 7. CHARGING HUB (WITH COLLECTION TRACKING & TABLE) ---
+# --- 7. CHARGING REGISTRY ---
 if choice == "⚡ Charging Hub":
     st.header("⚡ Master Charging Registry")
     
@@ -281,4 +281,5 @@ elif choice == "⚙️ Master Control":
         st.error("SYSTEM RESET COMPLETE.")
         time.sleep(2)
         st.rerun()
+
 
