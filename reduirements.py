@@ -2,152 +2,299 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import time
 
-# --- 1. CORE SYSTEM & AUTO-REPAIR ENGINE ---
-st.set_page_config(page_title="Abubakarr Enterprise Por", layout="wide", initial_sidebar_state="collapsed")
+# --- 1. APP CONFIGURATION (MUST BE FIRST) ---
+st.set_page_config(
+    page_title="Abubakarr Enterprise Por",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={'Get Help': None, 'Report a bug': None, 'About': None}
+)
 
+# --- 2. THE "FORTRESS" DATA ENGINE ---
+# This section prevents the "EmptyDataError" and "NameError" forever.
 DB_FILES = {
     "cust": "customer_data.csv",
     "inv": "inventory_data.csv",
-    "logins": "access_control.csv",
-    "maint": "maintenance.csv"
+    "login": "secure_login.csv",
+    "maint": "maintenance_log.csv"
 }
 
-def bootstrap_system():
-    """Fixes files and prevents EmptyDataErrors before they happen."""
+def init_system():
+    """Checks and repairs all database files before the app starts."""
     for key, path in DB_FILES.items():
-        # If file is missing or empty, build it from scratch
         if not os.path.exists(path) or os.stat(path).st_size == 0:
-            if key == "logins":
-                df = pd.DataFrame([{"role": "admin", "user": "admin", "pw": "abu123"},
-                                   {"role": "staff", "user": "staff", "pw": "hub456"}])
+            # Auto-Repair: Create fresh files with correct headers
+            if key == "login":
+                # DEFAULT LOGIN: Admin (Master) and Staff (Worker)
+                df = pd.DataFrame([
+                    {"role": "admin", "user": "admin", "pw": "abu123"},
+                    {"role": "staff", "user": "staff", "pw": "hub456"}
+                ])
             elif key == "inv":
                 df = pd.DataFrame(columns=["Item", "Stock", "Price", "Cost"])
             elif key == "cust":
-                df = pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status"])
+                df = pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status", "Staff"])
             else:
-                df = pd.DataFrame(columns=["Date", "Action", "Cost"])
+                df = pd.DataFrame(columns=["Date", "Action", "Cost", "Note"])
             df.to_csv(path, index=False)
 
-bootstrap_system()
+# Run the repair engine immediately
+init_system()
 
-# --- 2. DATA LOAD ---
-cust_df = pd.read_csv(DB_FILES["cust"])
-inv_df = pd.read_csv(DB_FILES["inv"])
-login_df = pd.read_csv(DB_FILES["logins"])
+# --- 3. DATA LOADING (SAFE MODE) ---
+def get_data(key):
+    return pd.read_csv(DB_FILES[key])
 
-# --- 3. SECURE LOGIN (MOBILE OPTIMIZED) ---
+def save_data(key, df):
+    df.to_csv(DB_FILES[key], index=False)
+
+# Load everything into memory
+cust_df = get_data("cust")
+inv_df = get_data("inv")
+login_df = get_data("login")
+maint_df = get_data("maint")
+
+# --- 4. SECURE LOGIN SYSTEM (BIOMETRIC SIMULATION) ---
 if 'auth' not in st.session_state: st.session_state.auth = None
+if 'username' not in st.session_state: st.session_state.username = None
 
 if not st.session_state.auth:
-    st.title("🏙️ Abubakarr Enterprise Por")
-    st.subheader("Master Access Control")
-    u = st.text_input("Username").lower().strip()
-    p = st.text_input("Password", type="password").strip()
-    if st.button("🔓 Open Dashboard"):
-        match = login_df[(login_df['user'].str.lower() == u) & (login_df['pw'].astype(str) == p)]
-        if not match.empty:
-            st.session_state.auth = match.iloc[0]['role']
-            st.session_state.username = u
-            st.rerun()
-        else: st.error("Access Denied: Check details.")
+    st.markdown("<h1 style='text-align: center;'>🔐 Abubakarr Enterprise Por</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Sierra Leone Master Hub</p>", unsafe_allow_html=True)
+    
+    with st.container():
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            u_input = st.text_input("👤 Username", placeholder="Enter ID...").lower().strip()
+            p_input = st.text_input("🔑 Password", type="password", placeholder="Enter Pin...")
+            
+            if st.button("🚀 ACCESS DASHBOARD", use_container_width=True):
+                user_match = login_df[(login_df['user'].str.lower() == u_input) & (login_df['pw'].astype(str) == p_input)]
+                if not user_match.empty:
+                    st.session_state.auth = user_match.iloc[0]['role']
+                    st.session_state.username = u_input
+                    st.toast(f"Welcome back, {u_input.upper()}!", icon="✅")
+                    time.sleep(0.5)
+                    st.rerun()
+                else:
+                    st.error("⛔ ACCESS DENIED: Invalid Credentials")
     st.stop()
 
-# --- 4. SIDEBAR (3-BAG SYSTEM & KRIO AI) ---
-st.sidebar.title("💎 THE 3-BAGS")
-total_revenue = cust_df['Price'].sum() if not cust_df.empty else 0
-st.sidebar.info(f"👜 Bag 1 (Ops): Le {total_revenue * 0.4:.1f}")
-st.sidebar.warning(f"👜 Bag 2 (Stock): Le {total_revenue * 0.3:.1f}")
-st.sidebar.success(f"💰 Bag 3 (Wealth): Le {total_revenue * 0.3:.1f}")
+# --- 5. INTELLIGENT SIDEBAR (AI & 3-BAGS) ---
+st.sidebar.markdown(f"## 👤 {st.session_state.username.upper()} ({st.session_state.auth.upper()})")
 
-st.sidebar.divider()
-st.sidebar.write("🎙️ **Krio AI Assistant**")
-if total_revenue > 200:
-    st.sidebar.markdown("🗨️ *'De business de flow fine! Keep eye on de cards.'*")
+# 🧠 AI Krio Prediction
+day_of_week = datetime.now().strftime("%A")
+if day_of_week in ["Friday", "Saturday"]:
+    ai_msg = "🔥 AI Says: 'Dis weekend go busy! Charge plenti power bank.'"
 else:
-    st.sidebar.markdown("🗨️ *'Small small, we go reach. Check de device queue.'*")
+    ai_msg = "📉 AI Says: 'Mid-week chill. Check stock level.'"
+st.sidebar.info(ai_msg)
 
-menu = ["🏪 Charging Registry", "📦 Retail Shop", "🔧 Maintenance", "⚙️ Master Control"]
+# 💰 3-Bag System Logic
+total_income = cust_df['Price'].sum() if not cust_df.empty else 0
+bag_ops = total_income * 0.4  # 40% for Operations
+bag_restock = total_income * 0.3 # 30% for Stock
+bag_wealth = total_income * 0.3 # 30% for Profit
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 💎 3-BAGS WALLET")
+st.sidebar.markdown(f"**👜 Ops:** Le {bag_ops:,.1f}")
+st.sidebar.markdown(f"**📦 Stock:** Le {bag_restock:,.1f}")
+st.sidebar.markdown(f"**💰 PROFIT:** Le {bag_wealth:,.1f}")
+st.sidebar.markdown("---")
+
+# Navigation
+if st.session_state.auth == "admin":
+    menu = ["📊 Dashboard & WhatsApp", "⚡ Charging Registry", "🛒 Retail Shop", "🔧 Maintenance", "⚙️ Master Control"]
+else:
+    menu = ["⚡ Charging Registry", "🛒 Retail Shop"] # Staff sees less
+
 choice = st.sidebar.radio("Navigate", menu)
-
-# --- 5. CHARGING REGISTRY (SIERRA LEONE DEVICES) ---
-if choice == "🏪 Charging Registry":
-    st.header("⚡ Master Charging Management")
-    with st.form("charging_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        card_no = c1.selectbox("Card Number", list(range(0, 101)))
-        cust_name = c2.text_input("Customer Name")
-        device_list = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Speaker", "Tablet"]
-        device = c1.selectbox("Select Device Type", device_list)
-        price = c2.select_slider("Price (Le)", options=list(range(3, 11)))
-        
-        if st.form_submit_button("✅ Register Device"):
-            new_entry = pd.DataFrame([{"Date": datetime.now().strftime("%Y-%m-%d"), "Card": card_no, 
-                                       "Name": cust_name, "Device": device, "Price": price, "Status": "Charging"}])
-            cust_df = pd.concat([cust_df, new_entry], ignore_index=True)
-            cust_df.to_csv(DB_FILES["cust"], index=False)
-            st.success(f"Saved! Card {card_no} is now Active.")
-            st.rerun()
-
-    st.subheader("📋 Current Charging Queue")
-    active = cust_df[cust_df['Status'] == "Charging"]
-    if not active.empty:
-        st.dataframe(active[["Card", "Name", "Device", "Price"]], use_container_width=True)
-        for i, row in active.iterrows():
-            col_a, col_b = st.columns([4, 1])
-            col_a.write(f"🏷️ **Card {row['Card']}** | {row['Name']} ({row['Device']})")
-            if col_b.button("Confirm Collection", key=f"coll_{i}"):
-                cust_df.at[i, 'Status'] = "Collected ✅"
-                cust_df.to_csv(DB_FILES["cust"], index=False)
-                st.rerun()
-    else: st.info("No phones are currently charging.")
-
-# --- 6. RETAIL SHOP (ADMIN ONLY ADD STOCK) ---
-elif choice == "📦 Retail Shop":
-    st.header("🛒 Shop Inventory")
-    if st.session_state.auth == "admin":
-        with st.expander("➕ Admin: Add New Stock"):
-            n_item = st.text_input("Item Name")
-            n_price = st.number_input("Price", 0.0)
-            n_qty = st.number_input("Quantity", 1)
-            if st.button("Add Item"):
-                new_item = pd.DataFrame([{"Item": n_item, "Stock": n_qty, "Price": n_price, "Cost": 0.0}])
-                inv_df = pd.concat([inv_df, new_item], ignore_index=True)
-                inv_df.to_csv(DB_FILES["inv"], index=False); st.rerun()
-    
-    st.subheader("Point of Sale")
-    if not inv_df.empty:
-        sell_item = st.selectbox("Sell Item", inv_df['Item'].tolist())
-        if st.button("Complete Sale (Le)"):
-            idx = inv_df.index[inv_df['Item'] == sell_item][0]
-            if inv_df.at[idx, 'Stock'] > 0:
-                inv_df.at[idx, 'Stock'] -= 1
-                inv_df.to_csv(DB_FILES["inv"], index=False)
-                st.success(f"Sale Recorded for {sell_item}!")
-                st.rerun()
-            else: st.error("Out of Stock!")
-    else: st.info("Inventory is empty.")
-
-# --- 7. MASTER CONTROL (ADMIN ONLY) ---
-elif choice == "⚙️ Master Control":
-    if st.session_state.auth == "admin":
-        st.header("🔐 Master Controller")
-        with st.expander("👤 User Management"):
-            for idx, row in login_df.iterrows():
-                st.write(f"User: {row['user']} | Role: {row['role']}")
-            st.divider()
-            new_user = st.text_input("New Staff Username")
-            new_pass = st.text_input("New Staff Password")
-            if st.button("Create Staff Account"):
-                new_row = pd.DataFrame([{"role": "staff", "user": new_user, "pw": new_pass}])
-                login_df = pd.concat([login_df, new_row], ignore_index=True)
-                login_df.to_csv(DB_FILES["logins"], index=False); st.success("Account Created!")
-
-        if st.button("♻️ WIPE ALL APP HISTORY"):
-            pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status"]).to_csv(DB_FILES["cust"], index=False)
-            st.success("App Data Cleared!"); st.rerun()
-    else: st.error("Admin Only Access")
-
-if st.sidebar.button("🚪 Logout"):
+if st.sidebar.button("🚪 LOGOUT", use_container_width=True):
     st.session_state.auth = None
     st.rerun()
+
+# --- 6. PAGE: DASHBOARD & WHATSAPP REPORT ---
+if choice == "📊 Dashboard & WhatsApp":
+    st.title("📊 Business Intelligence")
+    
+    # Financial Overview
+    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1.metric("Total Revenue", f"Le {total_income}")
+    kpi2.metric("Devices Charged", len(cust_df))
+    kpi3.metric("Stock Value", f"Le {(inv_df['Price'] * inv_df['Stock']).sum()}" if not inv_df.empty else "Le 0")
+    
+    st.divider()
+    
+    # 📲 WHATSAPP AUTO-SENDER
+    st.subheader("📲 Send Daily Report")
+    st.write("Click below to auto-generate a WhatsApp message to the Boss.")
+    
+    report_text = f"""
+    *🏪 ABUBAKARR ENTERPRISE DAILY REPORT*
+    📅 Date: {datetime.now().strftime('%Y-%m-%d')}
+    
+    *💰 FINANCE*
+    - Total Sales: Le {total_income}
+    - 3-Bags Profit: Le {bag_wealth}
+    
+    *⚡ CHARGING*
+    - Total Devices: {len(cust_df)}
+    
+    *🧠 AI STATUS*
+    - {ai_msg}
+    
+    *Signed: {st.session_state.username}*
+    """
+    # Encodes the text for a URL
+    whatsapp_url = f"https://wa.me/?text={report_text.replace(' ', '%20').replace(chr(10), '%0A')}"
+    
+    st.link_button("📤 Send Report via WhatsApp", whatsapp_url)
+
+# --- 7. PAGE: CHARGING REGISTRY (MOBILE OPTIMIZED) ---
+elif choice == "⚡ Charging Registry":
+    st.header("⚡ Charging Station")
+    
+    # ENTRY FORM
+    with st.expander("➕ Register New Device", expanded=True):
+        with st.form("charge_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            # 0-100 Card System
+            card = c1.selectbox("🎫 Card Number", list(range(1, 101)))
+            name = c2.text_input("👤 Customer Name")
+            
+            # Sierra Leone Specific Devices
+            dev_types = ["Infinix", "Tecno", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Bluetooth Speaker", "Tablet", "Laptop"]
+            device = c1.selectbox("📱 Device Type", dev_types)
+            
+            # Price 3-10 Le
+            price = c2.select_slider("💵 Price (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10, 15, 20])
+            
+            if st.form_submit_button("✅ CHECK-IN DEVICE"):
+                new_row = {"Date": datetime.now().strftime("%Y-%m-%d %H:%M"), "Card": card, "Name": name, 
+                           "Device": device, "Price": price, "Status": "Charging", "Staff": st.session_state.username}
+                cust_df = pd.concat([cust_df, pd.DataFrame([new_row])], ignore_index=True)
+                save_data("cust", cust_df)
+                st.success(f"Card {card} Checked In!")
+                st.rerun()
+
+    # ACTIVE LIST & COLLECTION
+    st.divider()
+    st.subheader("📋 Active Devices (Confirm Collection)")
+    
+    active_df = cust_df[cust_df['Status'] == "Charging"]
+    
+    if not active_df.empty:
+        # Search Bar
+        search = st.text_input("🔍 Search Name or Card...")
+        if search:
+            active_df = active_df[active_df['Name'].str.contains(search, case=False) | active_df['Card'].astype(str).str.contains(search)]
+            
+        for idx, row in active_df.iterrows():
+            with st.container():
+                col_det, col_btn = st.columns([3, 1])
+                col_det.info(f"**#{row['Card']}** | {row['Name']} | {row['Device']} (Le {row['Price']})")
+                if col_btn.button("✅ RETURN", key=f"ret_{idx}"):
+                    cust_df.at[idx, 'Status'] = "Collected"
+                    save_data("cust", cust_df)
+                    st.success("Returned!")
+                    st.rerun()
+    else:
+        st.info("No devices currently charging.")
+
+# --- 8. PAGE: RETAIL SHOP (POS) ---
+elif choice == "🛒 Retail Shop":
+    st.header("🛒 Retail Shop POS")
+    
+    # TAB 1: SELL (Available to everyone)
+    t1, t2 = st.tabs(["💸 Sell Item", "📦 Stock List"])
+    
+    with t1:
+        if not inv_df.empty:
+            sell_item = st.selectbox("Select Item", inv_df['Item'].unique())
+            # Find current stock
+            curr_stock = inv_df.loc[inv_df['Item'] == sell_item, 'Stock'].values[0]
+            curr_price = inv_df.loc[inv_df['Item'] == sell_item, 'Price'].values[0]
+            
+            st.write(f"**Stock:** {curr_stock} | **Price:** Le {curr_price}")
+            
+            if st.button("💰 CONFIRM SALE"):
+                if curr_stock > 0:
+                    idx = inv_df.index[inv_df['Item'] == sell_item][0]
+                    inv_df.at[idx, 'Stock'] -= 1
+                    save_data("inv", inv_df)
+                    st.balloons()
+                    st.success(f"Sold {sell_item} for Le {curr_price}!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Out of Stock!")
+        else:
+            st.warning("Inventory is empty. Ask Admin to add items.")
+
+    # TAB 2: INVENTORY (View Only for Staff, Edit for Admin)
+    with t2:
+        st.dataframe(inv_df, use_container_width=True)
+        
+        # ADMIN ONLY: Add Stock
+        if st.session_state.auth == "admin":
+            st.markdown("### ➕ Add New Stock (Admin Only)")
+            with st.form("add_stock"):
+                i_name = st.text_input("Item Name")
+                i_price = st.number_input("Selling Price", 0.0)
+                i_qty = st.number_input("Quantity", 1)
+                if st.form_submit_button("Add to Inventory"):
+                    new_item = {"Item": i_name, "Stock": i_qty, "Price": i_price, "Cost": 0.0}
+                    inv_df = pd.concat([inv_df, pd.DataFrame([new_item])], ignore_index=True)
+                    save_data("inv", inv_df)
+                    st.success("Item Added!")
+                    st.rerun()
+
+# --- 9. PAGE: MAINTENANCE ---
+elif choice == "🔧 Maintenance":
+    st.header("🔧 Maintenance Log")
+    with st.form("maint_form"):
+        act = st.selectbox("Action", ["Oil Change", "Generator Repair", "Cleaning", "Fuel Purchase"])
+        cost = st.number_input("Cost (Le)", 0.0)
+        note = st.text_input("Notes")
+        if st.form_submit_button("Log Maintenance"):
+            m_row = {"Date": datetime.now().strftime("%Y-%m-%d"), "Action": act, "Cost": cost, "Note": note}
+            maint_df = pd.concat([maint_df, pd.DataFrame([m_row])], ignore_index=True)
+            save_data("maint", maint_df)
+            st.success("Logged!")
+            st.rerun()
+    st.dataframe(maint_df)
+
+# --- 10. PAGE: MASTER CONTROL (ADMIN ONLY) ---
+elif choice == "⚙️ Master Control":
+    st.header("🔐 Master Controller (Admin Only)")
+    
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.subheader("👥 User Management")
+        st.dataframe(login_df)
+        with st.form("add_user"):
+            nu = st.text_input("New Username").lower().strip()
+            np = st.text_input("New Password")
+            nr = st.selectbox("Role", ["staff", "admin"])
+            if st.form_submit_button("Create User"):
+                login_df = pd.concat([login_df, pd.DataFrame([{"role": nr, "user": nu, "pw": np}])], ignore_index=True)
+                save_data("login", login_df)
+                st.success("User Created!")
+                st.rerun()
+                
+    with c2:
+        st.subheader("🧨 Danger Zone")
+        st.warning("This will delete all history permanently.")
+        if st.button("♻️ FACTORY RESET APP"):
+            # Clear all dataframes
+            pd.DataFrame(columns=["Date", "Card", "Name", "Device", "Price", "Status", "Staff"]).to_csv(DB_FILES["cust"], index=False)
+            pd.DataFrame(columns=["Date", "Action", "Cost", "Note"]).to_csv(DB_FILES["maint"], index=False)
+            st.error("SYSTEM RESET COMPLETE. ALL HISTORY DELETED.")
+            time.sleep(2)
+            st.rerun()
+
+
