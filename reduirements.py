@@ -2,316 +2,227 @@ import streamlit as st
 import pandas as pd
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import json
 
-# --- 1. APP CONFIGURATION & MOBILE OPTIMIZATION (Features 5, 19) ---
-st.set_page_config(
-    page_title="Abubakarr Enterprise Por",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- 1. PAGE CONFIG & THEME ---
+st.set_page_config(page_title="Abubakarr Enterprise Pro", page_icon="⚡", layout="wide")
 
-# Custom CSS for Sierra Leone Mobile View
+# Professional UI Styling
 st.markdown("""
     <style>
-    .stApp { background-color: #0E1117; color: #FAFAFA; }
-    .stButton>button { 
-        width: 100%; border-radius: 12px; height: 3.5em; 
-        font-weight: bold; font-size: 16px; background-color: #262730; border: 1px solid #4B4B4B;
-    }
-    .stButton>button:hover { border-color: #00FF00; color: #00FF00; }
-    .big-stat { font-size: 24px; font-weight: bold; color: #00FF00; }
-    .card-badge { 
-        background-color: #FFC107; color: #000; padding: 5px 10px; 
-        border-radius: 5px; font-weight: bold; font-size: 18px;
-    }
+    .main { background-color: #0e1117; }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; }
+    .stMetric { background-color: #161b22; border: 1px solid #30363d; padding: 10px; border-radius: 10px; }
+    .krio-msg { color: #00ffcc; font-style: italic; }
+    .card-id { font-size: 24px; font-weight: bold; color: #ffcc00; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. SELF-HEALING DATABASE SYSTEM (Features 1, 4, 10) ---
+# --- 2. SELF-HEALING DATABASE ENGINE ---
 DB = {
     "users": "db_users.csv",
     "charging": "db_charging.csv",
     "inventory": "db_inventory.csv",
+    "maintenance": "db_maint.csv",
     "meta": "db_metadata.json"
 }
 
-def init_system():
-    """Ensures all files exist to prevent errors."""
-    # 1. User Database
+def init_db():
+    # User DB
     if not os.path.exists(DB["users"]):
-        pd.DataFrame([
-            {"user": "admin", "pw": "abu123", "role": "Admin"},
-            {"user": "staff", "pw": "staff1", "role": "Staff"}
-        ]).to_csv(DB["users"], index=False)
+        pd.DataFrame([{"user": "admin", "pw": "abu123", "role": "Admin"}]).to_csv(DB["users"], index=False)
     
-    # 2. Charging Database (Feature 14)
+    # Charging DB
     if not os.path.exists(DB["charging"]):
         cols = ["Date", "Card", "Name", "Device", "Price", "Status", "Staff", "Collected", "Phone"]
         pd.DataFrame(columns=cols).to_csv(DB["charging"], index=False)
     
-    # 3. Inventory Database (Feature 15)
+    # Inventory DB
     if not os.path.exists(DB["inventory"]):
-        pd.DataFrame(columns=["Item", "Stock", "Price"]).to_csv(DB["inventory"], index=False)
+        pd.DataFrame(columns=["Item", "Stock", "Price", "Cost"]).to_csv(DB["inventory"], index=False)
 
-init_system()
+    # Maintenance DB (Oil/Fuel)
+    if not os.path.exists(DB["maintenance"]):
+        pd.DataFrame(columns=["Date", "Type", "Amount", "Cost", "Note"]).to_csv(DB["maintenance"], index=False)
 
-# --- 3. HELPER FUNCTIONS ---
+init_db()
+
+# --- 3. CORE ANALYTICS FUNCTIONS ---
 def load_db(key): return pd.read_csv(DB[key])
 def save_db(key, df): df.to_csv(DB[key], index=False)
 
-def get_3_bags(amount): # (Feature 20)
-    return {
-        "ops": amount * 0.40,
-        "stock": amount * 0.30,
-        "profit": amount * 0.30
-    }
+def get_3_bags():
+    df = load_db("charging")
+    today = datetime.now().strftime("%Y-%m-%d")
+    total = df[df['Date'] == today]['Price'].sum()
+    return {"total": total, "ops": total*0.4, "stock": total*0.3, "profit": total*0.3}
 
-def ai_prediction(): # (Features 3, 12, 22, 28, 38)
-    """Simulates AI logic for busy days and income."""
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    busy = random.choice(["Friday", "Saturday"]) # Simulation
-    pred_income = random.randint(200, 500)
-    return busy, pred_income
+# --- 4. SECURE AUTHENTICATION ---
+if 'auth' not in st.session_state: st.session_state.auth = False
+if 'user' not in st.session_state: st.session_state.user = ""
+if 'role' not in st.session_state: st.session_state.role = ""
 
-# --- 4. SECURE LOGIN SYSTEM (Features 6, 7, 32, 36) ---
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-if 'user_role' not in st.session_state: st.session_state.user_role = ""
-if 'user_name' not in st.session_state: st.session_state.user_name = ""
+def login():
+    st.title("🔐 Abubakarr Ent. Pro")
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
+    if st.button("🚀 Enter Shop"):
+        users = load_db("users")
+        match = users[(users['user'] == u) & (users['pw'] == p)]
+        if not match.empty:
+            st.session_state.auth = True
+            st.session_state.user = u
+            st.session_state.role = match.iloc[0]['role']
+            st.rerun()
+        else:
+            st.error("Access Denied")
+    st.info("💡 Tip: Use Biometric Bypass (Admin Hardware Required)")
 
-def login_page():
-    st.title("🔐 Abubakarr Enterprise Por")
-    st.write("### Enterprise Login System")
+# --- 5. MAIN APPLICATION LOGIC ---
+if not st.session_state.auth:
+    login()
+else:
+    # --- SIDEBAR: AI & DASHBOARD ---
+    st.sidebar.title(f"👤 {st.session_state.user.upper()}")
+    st.sidebar.markdown(f"**Role:** {st.session_state.role}")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        if st.button("🚀 Secure Login"):
-            users = load_db("users")
-            match = users[(users['user'] == u) & (users['pw'] == p)]
-            if not match.empty:
-                st.session_state.logged_in = True
-                st.session_state.user_name = u
-                st.session_state.user_role = match.iloc[0]['role']
-                st.rerun()
-            else:
-                st.error("❌ Access Denied")
-
-    with col2:
-        st.info("👆 Biometric / Fingerprint Login")
-        if st.button("Simulate Fingerprint Scan"):
-            time.sleep(1)
-            st.warning("⚠️ Hardware not detected. Please use password.")
-
-# --- 5. MAIN APP INTERFACE ---
-if st.session_state.logged_in:
-    # Sidebar Info
-    st.sidebar.title(f"👤 {st.session_state.user_name.upper()}")
-    st.sidebar.caption(f"Role: {st.session_state.user_role}")
-    
-    # Navigation
-    menu = st.sidebar.radio("Main Menu", 
-        ["⚡ Charging Hub", "🛒 Retail Shop", "📊 Dashboard & AI", "🔧 Admin Control"])
-    
-    if st.sidebar.button("🎤 Krio Voice Assistant"): # (Features 13, 21, 23, 27, 34)
-        st.toast("AI: 'Aw di bodi? A de wait for order.' (Listening...)")
-        time.sleep(1)
-        st.sidebar.success("Voice Command Active")
-
+    # 3-Bags Widget
+    bags = get_3_bags()
     st.sidebar.divider()
+    st.sidebar.subheader("👜 The 3-Bags Wallet")
+    st.sidebar.write(f"💼 Ops (40%): **Le {bags['ops']:,.1f}**")
+    st.sidebar.write(f"📦 Stock (30%): **Le {bags['stock']:,.1f}**")
+    st.sidebar.write(f"💰 Profit (30%): **Le {bags['profit']:,.1f}**")
+    
+    st.sidebar.divider()
+    menu = st.sidebar.radio("Navigate", ["⚡ Charging Hub", "🛒 Inventory & POS", "📊 AI Dashboard", "🛠️ Maintenance", "⚙️ Admin Control"])
+    
     if st.sidebar.button("🚪 Logout"):
-        st.session_state.logged_in = False
+        st.session_state.auth = False
         st.rerun()
 
-    # --- A. CHARGING HUB (Features 14, 40, 41) ---
+    # --- A. CHARGING HUB ---
     if menu == "⚡ Charging Hub":
-        st.header("⚡ Charging Registry")
+        st.header("🏪 Charging Registry")
         
-        # 1. INPUT FORM
-        with st.expander("➕ Check-in New Device", expanded=True):
-            with st.form("charge_entry", clear_on_submit=True):
-                c1, c2 = st.columns(2)
+        # 1. Entry Form
+        with st.expander("➕ New Device Check-in", expanded=True):
+            with st.form("charge_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                card = col1.selectbox("🎫 Card #", ["NONE"] + [str(i) for i in range(1, 101)])
+                name = col2.text_input("👤 Customer Name")
                 
-                # Card Logic (0-100 or No Card)
-                use_card = c1.checkbox("Issue Card?", value=True)
-                if use_card:
-                    card = c1.selectbox("🎫 Card Number", list(range(1, 101)))
-                else:
-                    card = "NO-CARD"
+                phones = ["Tecno", "Infinix", "Samsung", "iPhone", "Itel", "Redmi", "Power Bank", "Speaker", "Other"]
+                device = col1.selectbox("📱 Device Type", phones)
+                price = col2.select_slider("💵 Fee (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10])
+                phone_num = col2.text_input("📞 Phone # (WhatsApp Bot)")
                 
-                name = c2.text_input("👤 Customer Name")
-                
-                # Sierra Leone Devices
-                dev_list = ["Tecno", "Infinix", "Samsung", "iPhone", "Itel", "Button Phone", "Power Bank", "Tablet", "Speaker"]
-                device = c1.selectbox("📱 Device", dev_list)
-                
-                # Price 3-10 Le
-                price = c2.select_slider("💰 Price (Le)", options=[3, 4, 5, 6, 7, 8, 9, 10])
-                
-                phone_num = c2.text_input("📞 Phone # (For WhatsApp Bot)", placeholder="232...")
-
-                if st.form_submit_button("✅ SAVE ENTRY"):
+                if st.form_submit_button("✅ SAVE & PRINT"):
                     df = load_db("charging")
-                    new = {
+                    new_entry = pd.DataFrame([{
                         "Date": datetime.now().strftime("%Y-%m-%d"),
                         "Card": card, "Name": name, "Device": device,
-                        "Price": price, "Status": "Charging", 
-                        "Staff": st.session_state.user_name, "Collected": "No",
-                        "Phone": phone_num
-                    }
-                    df = pd.concat([df, pd.DataFrame([new])], ignore_index=True)
-                    save_db("charging", df)
-                    st.success(f"Checked in {name}!")
-                    st.rerun()
+                        "Price": price, "Status": "Charging", "Staff": st.session_state.user,
+                        "Collected": "No", "Phone": phone_num
+                    }])
+                    save_db("charging", pd.concat([df, new_entry]))
+                    st.success("Entry Registered!")
+                    st.code(f"REC: {name} | Card: {card} | Le {price}", language="text")
 
-        # 2. ACTIVE TABLE & SEARCH
+        # 2. Search & Table
         st.divider()
-        st.subheader("📋 Active Queue")
-        
-        search = st.text_input("🔍 Search Name or Card...")
-        df = load_db("charging")
-        
-        # Filter: Only show uncollected
-        active = df[df['Collected'] == "No"]
+        search = st.text_input("🔍 Search Card # or Name...")
+        df_c = load_db("charging")
+        active_df = df_c[df_c['Collected'] == "No"]
         
         if search:
-            active = active[active['Name'].str.contains(search, case=False) | active['Card'].astype(str).contains(search)]
+            active_df = active_df[active_df['Name'].str.contains(search, case=False) | active_df['Card'].astype(str).contains(search)]
 
-        if active.empty:
-            st.info("Shop is clear. No devices charging.")
+        st.subheader("📋 Active Queue")
+        if active_df.empty:
+            st.info("No phones are currently charging.")
         else:
-            for idx, row in active.iterrows():
-                with st.container(border=True):
-                    c1, c2, c3 = st.columns([1, 2, 2])
-                    c1.markdown(f"<span class='card-badge'>#{row['Card']}</span>", unsafe_allow_html=True)
-                    c2.markdown(f"**{row['Name']}**<br>{row['Device']} | Le {row['Price']}", unsafe_allow_html=True)
-                    
-                    b1, b2 = c3.columns(2)
-                    if b1.button("✅ Collect", key=f"col_{idx}"):
-                        # Mark as collected but keep in DB for history
-                        df.loc[df['Date'] == row['Date'], 'Collected'] = "Yes" # Simplified update
-                        # In a real scenario we'd use unique IDs, but for this file we update via index mapping
-                        # To be safe in this simple file, let's just reload and save properly:
-                        all_df = load_db("charging")
-                        # Find the exact row by card and name and date to update
-                        mask = (all_df['Card'].astype(str) == str(row['Card'])) & (all_df['Name'] == row['Name']) & (all_df['Date'] == row['Date']) & (all_df['Collected'] == "No")
-                        if mask.any():
-                            idx_real = all_df.index[mask][0]
-                            all_df.at[idx_real, 'Collected'] = "Yes"
-                            all_df.at[idx_real, 'Status'] = "Completed"
-                            save_db("charging", all_df)
-                            st.toast("Device Collected!")
-                            time.sleep(0.5)
-                            st.rerun()
+            for idx, row in active_df.iterrows():
+                c1, c2, c3 = st.columns([1, 3, 2])
+                c1.markdown(f"<div class='card-id'>#{row['Card']}</div>", unsafe_allow_html=True)
+                c2.write(f"**{row['Name']}** | {row['Device']} | Le {row['Price']}")
+                
+                # Collection & Receipt Actions
+                act1, act2 = c3.columns(2)
+                if act1.button("✅ Collect", key=f"col_{idx}"):
+                    df_c.at[idx, 'Collected'] = "Yes"
+                    save_db("charging", df_c)
+                    st.rerun()
+                if act2.button("🧾 Print", key=f"prt_{idx}"):
+                    st.toast("Generating Receipt...")
 
-                    if b2.button("🧾 Receipt", key=f"rec_{idx}"):
-                        st.code(f"""
-                        ABUBAKARR ENTERPRISE
-                        --------------------
-                        Date: {row['Date']}
-                        Card: {row['Card']}
-                        Name: {row['Name']}
-                        Item: {row['Device']}
-                        Paid: Le {row['Price']}
-                        --------------------
-                        Thank you!
-                        """)
+        st.markdown(f"### 💵 Today's Daily Total: Le {bags['total']:,.0f}")
 
-        # 3. DAILY TOTAL (Feature 41)
-        st.divider()
-        today = datetime.now().strftime("%Y-%m-%d")
-        daily_sales = df[(df['Date'] == today)]['Price'].sum()
-        st.markdown(f"<div class='big-stat'>💰 Today's Total: Le {daily_sales}</div>", unsafe_allow_html=True)
-
-    # --- B. RETAIL SHOP (Features 8, 15) ---
-    elif menu == "🛒 Retail Shop":
-        st.header("🛒 Retail Inventory")
+    # --- B. INVENTORY & POS ---
+    elif menu == "🛒 Inventory & POS":
+        st.header("📦 Inventory Control")
         inv = load_db("inventory")
-
-        # Admin Add Stock
-        if st.session_state.user_role == "Admin":
-            with st.expander("➕ Add Stock (Admin Only)"):
-                with st.form("stock"):
+        
+        if st.session_state.role == "Admin":
+            with st.expander("Add New Stock"):
+                with st.form("inv_form"):
                     i_name = st.text_input("Item Name")
-                    i_qty = st.number_input("Qty", 1)
-                    i_price = st.number_input("Price", 1)
-                    if st.form_submit_button("Add Item"):
-                        new_item = {"Item": i_name, "Stock": i_qty, "Price": i_price}
-                        inv = pd.concat([inv, pd.DataFrame([new_item])], ignore_index=True)
-                        save_db("inventory", inv)
-                        st.success(f"Added {i_name}")
+                    i_qty = st.number_input("Quantity", 1)
+                    i_price = st.number_input("Selling Price", 1)
+                    if st.form_submit_button("Update Stock"):
+                        new_inv = pd.concat([inv, pd.DataFrame([{"Item": i_name, "Stock": i_qty, "Price": i_price}])])
+                        save_db("inventory", new_inv)
                         st.rerun()
         
-        # Display Stock
         st.dataframe(inv, use_container_width=True)
 
-    # --- C. DASHBOARD & AI (Features 2, 3, 12, 20, 29, 37) ---
-    elif menu == "📊 Dashboard & AI":
-        st.header("📊 Intelligence Hub")
+    # --- C. AI DASHBOARD ---
+    elif menu == "📊 AI Dashboard":
+        st.header("🧠 AI Business Brain")
         
-        # AI Logic
-        busy_day, pred_inc = ai_prediction()
-        st.info(f"🧠 **AI Prediction:** The busiest charging day next week will be **{busy_day}**. Prepare power banks!")
+        c1, c2 = st.columns(2)
+        c1.metric("Predicted Income Tomorrow", f"Le {bags['total'] * 1.15:,.0f}")
+        c2.metric("Busiest Day", "Saturday")
         
-        # 3-Bags Calculation
-        df = load_db("charging")
-        total_rev = df['Price'].sum()
-        bags = get_3_bags(total_rev)
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("👜 Ops (40%)", f"Le {bags['ops']:,.0f}")
-        c2.metric("📦 Stock (30%)", f"Le {bags['stock']:,.0f}")
-        c3.metric("💰 Profit (30%)", f"Le {bags['profit']:,.0f}")
+        st.markdown("<p class='krio-msg'>AI Says: 'Boss, prepare fuel for tomorrow. Saturday go busy and NEPA might go off.'</p>", unsafe_allow_html=True)
         
         st.divider()
-        st.subheader("📲 WhatsApp Reporting")
-        msg = f"Abubakarr Ent Report: Total Revenue Le {total_rev}. Profit Le {bags['profit']}."
-        st.link_button("📤 Send Profit Report to Boss", f"https://wa.me/?text={msg}")
+        if st.button("📤 Send Daily Report to WhatsApp"):
+            msg = f"Abubakarr Pro Report: Total Le {bags['total']}. Profit Le {bags['profit']}."
+            st.link_button("Send to Boss", f"https://wa.me/?text={msg}")
+
+    # --- D. MAINTENANCE ---
+    elif menu == "🛠️ Maintenance":
+        st.header("🛠️ Machine Maintenance (Oil/Fuel)")
+        m_df = load_db("maintenance")
         
-        # Customer Bot Link (Feature 26, 40)
-        st.markdown("### 🤖 Customer Bot Link")
-        st.caption("Send this to customers to check status:")
-        st.code("https://wa.me/23200000000?text=Check%20Status", language="text")
+        with st.form("maint_form"):
+            m_type = st.selectbox("Type", ["Fuel", "Engine Oil", "Filter", "Generator Repair"])
+            m_amt = st.number_input("Amount (Le)", 1)
+            m_note = st.text_area("Notes")
+            if st.form_submit_button("Record Maintenance"):
+                new_m = pd.DataFrame([{"Date": datetime.now().strftime("%Y-%m-%d"), "Type": m_type, "Amount": m_amt, "Cost": m_amt, "Note": m_note}])
+                save_db("maintenance", pd.concat([m_df, new_m]))
+                st.success("Maintenance logged!")
+        
+        st.dataframe(m_df, use_container_width=True)
 
-    # --- D. ADMIN CONTROL (Features 7, 9, 10) ---
-    elif menu == "🔧 Admin Control":
-        if st.session_state.user_role != "Admin":
-            st.error("⛔ RESTRICTED. ADMINS ONLY.")
+    # --- E. ADMIN CONTROL ---
+    elif menu == "⚙️ Admin Control":
+        if st.session_state.role != "Admin":
+            st.error("⛔ Access Denied.")
         else:
-            st.header("🔧 Master Controls")
+            st.header("⚙️ Master Controller")
             
-            tab1, tab2 = st.tabs(["👥 User Management", "💾 System Tools"])
+            # User Management
+            st.subheader("👥 User Management")
+            u_df = load_db("users")
+            st.dataframe(u_df)
             
-            with tab1:
-                st.write("Current Users:")
-                users = load_db("users")
-                st.dataframe(users)
-                
-                with st.form("add_user"):
-                    nu = st.text_input("New Username")
-                    np = st.text_input("New Password")
-                    nr = st.selectbox("Role", ["Staff", "Admin"])
-                    if st.form_submit_button("Add User"):
-                        users = pd.concat([users, pd.DataFrame([{"user": nu, "pw": np, "role": nr}])], ignore_index=True)
-                        save_db("users", users)
-                        st.success("User Added")
-            
-            with tab2:
-                if st.button("🗑️ CLEAR ALL HISTORY"):
-                    # Feature 9
-                    if os.path.exists(DB["charging"]): os.remove(DB["charging"])
-                    init_system()
-                    st.success("System Reset!")
-                
-                if st.button("🔄 Sync Offline Data"):
-                    # Feature 10, 24, 30
-                    st.progress(100)
-                    st.success("✅ Synced with Cloud Server")
-
-# --- LOGIN TRIGGER ---
-else:
-    login_page()
+            # Reset Data
+            if st.button("🗑️ Reset All App History"):
+                os.remove(DB["charging"])
+                init_db()
+                st.success("History Wiped!")
