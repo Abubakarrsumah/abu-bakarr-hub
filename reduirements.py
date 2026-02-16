@@ -129,3 +129,106 @@ if menu == "Charging Registry":
         "Tecno", "Infinix", "Samsung", "iPhone",
         "Itel", "Nokia", "Huawei", "Power Bank",
         "Bluetooth Speaker", "Laptop"
+    ]
+
+    with st.form("charge_form"):
+        customer = st.text_input("Customer Name")
+        phone = st.selectbox("Device Type", phone_models)
+        price = st.slider("Price (Le)", 3, 10, 5)
+        card = st.text_input("Card Number (0-100 or blank)")
+        submitted = st.form_submit_button("Add")
+
+        if submitted:
+            c.execute("""INSERT INTO charging 
+                (customer, phone_model, price, card_number, collected, date)
+                VALUES (?,?,?,?,?,?)""",
+                (customer, phone, price, card, "No", datetime.date.today().isoformat()))
+            conn.commit()
+            st.success("Added Successfully")
+
+    st.subheader("Search")
+    search = st.text_input("Search Card Number")
+
+    query = "SELECT * FROM charging"
+    if search:
+        query += f" WHERE card_number='{search}'"
+
+    data = pd.read_sql_query(query, conn)
+
+    if not data.empty:
+        st.dataframe(data)
+
+        st.write("### Daily Total")
+        st.success(f"{data['price'].sum()} Le")
+
+# ================= INVENTORY =================
+
+if menu == "Inventory":
+    if st.session_state.role != "admin":
+        st.error("Only Admin can manage inventory")
+        st.stop()
+
+    st.title("📦 Inventory Control")
+
+    item = st.text_input("Item Name")
+    qty = st.number_input("Quantity", 0)
+    price = st.number_input("Price")
+
+    if st.button("Add Item"):
+        c.execute("INSERT INTO inventory (item,quantity,price) VALUES (?,?,?)",
+                  (item, qty, price))
+        conn.commit()
+        st.success("Item Added")
+
+    inv = pd.read_sql_query("SELECT * FROM inventory", conn)
+    st.dataframe(inv)
+
+# ================= STAFF =================
+
+if menu == "Staff":
+    if st.session_state.role != "admin":
+        st.error("Only Admin can manage staff")
+        st.stop()
+
+    st.title("👥 Staff Management")
+
+    new_user = st.text_input("Username")
+    new_pass = st.text_input("Password", type="password")
+    role = st.selectbox("Role", ["staff"])
+
+    if st.button("Add Staff"):
+        c.execute("INSERT INTO users (username,password,role) VALUES (?,?,?)",
+                  (new_user, hash_password(new_pass), role))
+        conn.commit()
+        st.success("Staff Added")
+
+    staff = pd.read_sql_query("SELECT id,username,role FROM users", conn)
+    st.dataframe(staff)
+
+# ================= MAINTENANCE =================
+
+if menu == "Maintenance":
+    st.title("⚙ Machine Maintenance")
+
+    mtype = st.selectbox("Type", ["Fuel", "Oil", "Repair"])
+    cost = st.number_input("Cost")
+
+    if st.button("Add Record"):
+        c.execute("INSERT INTO maintenance (type,cost,date) VALUES (?,?,?)",
+                  (mtype, cost, datetime.date.today().isoformat()))
+        conn.commit()
+        st.success("Saved")
+
+    mdata = pd.read_sql_query("SELECT * FROM maintenance", conn)
+    st.dataframe(mdata)
+
+# ================= REPORTS =================
+
+if menu == "Reports":
+    st.title("📊 Reports")
+
+    df = pd.read_sql_query("SELECT * FROM charging", conn)
+    if not df.empty:
+        st.bar_chart(df["price"])
+    else:
+        st.info("No Data Yet")
