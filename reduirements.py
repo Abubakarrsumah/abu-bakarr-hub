@@ -894,4 +894,4 @@ else:
 # Footer
 # ---------------------------
 st.markdown("---")
-st.markdown("<center>© 2025 Abubakarr Enterprise - Sierra Leone All-in-One Shop Management</center>", unsafe_allow_html=True)
+st.markdown("<center>© 2026 Abubakarr Enterprise - Sierra Leone All-in-One Shop Management</center>", unsafe_allow_html=True)
