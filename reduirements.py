@@ -1,4 +1,4 @@
-"""
+y"""
 Abubakarr Enterprise POR - Complete All-in-One Shop Management System
 Sierra Leone Mobile Business Tool
 Version: 3.0 (Zero‑Error Certified)
@@ -121,7 +121,7 @@ def init_db():
     )''')
     
     # Insert default admin if not exists
-    admin_pass = hash_password("admin123")
+    admin_pass = hash_password("abu123@")
     c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",
               ("admin", admin_pass, "admin"))
     
@@ -953,3 +953,4 @@ else:
 # ---------------------------
 st.markdown("---")
 st.markdown("<center>© 2026 Abubakarr Enterprise - Sierra Leone All-in-One Shop Management</center>", unsafe_allow_html=True)
+
